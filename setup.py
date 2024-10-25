@@ -7,7 +7,7 @@ setup(
     install_requires=[
     ],
     author='Flora Takacs',
-    description='Logistic Classification for neural data',
+    description='Logistic Classification for ephys data and optogentic inactivation',
     long_description='',
     license='MIT',
     url='https://github.com/takacsflora/NeuroLogit',
