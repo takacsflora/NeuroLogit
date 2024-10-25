@@ -9,7 +9,6 @@ from sklearn.metrics import log_loss
 
 import matplotlib.pyplot as plt
 
-
 class AV_model:
     def __init__(self):
         # Initialize sensory parameters
@@ -185,7 +184,6 @@ class AV_model:
 
             ax.plot(x_, y_, color=mycolor, **predplotkwargs)
 
-
 class AV_opto_model(AV_model):
     def __init__(self):
         # Call the base model's constructor
@@ -262,7 +260,6 @@ class AV_opto_model(AV_model):
     def generate_pseudo_trials(bias_opto=0):
         pass
 
-
 class AV_dual_contra_divisive(AV_model):
     def __init__(self):
         # Call the base model's constructor
@@ -327,7 +324,6 @@ class AV_dual_contra_divisive(AV_model):
 
         self.pseudo = new
 
-
 class AV_visBias_divisive(AV_dual_contra_divisive):
     def predict_log_proba(self, X):
         # Extract inputs
@@ -354,7 +350,6 @@ class AV_visBias_divisive(AV_dual_contra_divisive):
         logOdds = left_odds + right_odds
 
         return logOdds
-
 
 class AV_contra_divisive(AV_model):
     def __init__(self):
@@ -419,7 +414,6 @@ class AV_contra_divisive(AV_model):
             new.append(a)
 
         self.pseudo = new
-
 
 class AV_dual_contra_additive(AV_model):
     def __init__(self):
@@ -496,7 +490,6 @@ class AV_dual_contra_additive(AV_model):
             new.append(a)
 
         self.pseudo = new
-
 
 class AV_split_bias_dual(AV_dual_contra_divisive):
     def __init__(self):

@@ -26,6 +26,7 @@ def plot_psychometric(
     assert np.isin(
         ["visR", "audR", "visL", "audL", "choice"], trials.columns
     ).all(), "the trials are inputted in an unexpected format."
+    
     # handling gamma -- for now we use common gamma
     trials = trials.copy()
     for v in ["visR", "visL"]:
