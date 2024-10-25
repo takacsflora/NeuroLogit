@@ -14,9 +14,8 @@ import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 _,formatted_path,savepath = get_paths(r'opto\region_comparison\uni')
-all_files = list(formatted_path.glob('*Frontal.csv'))
+all_files = list(formatted_path.glob('*.csv'))
 
-#%%
 results = []
 for rec in all_files:
     brain_region = rec.stem
@@ -27,7 +26,7 @@ for rec in all_files:
         trials_of_subject = trials[trials.subject==subject]
         
         # fit the sklearn model
-        params_sklearn,loss,auc,t = fit_opto_model(trials_of_subject,nametag=None,gammafit=True,torchfit=False)
+        params_sklearn,loss,auc,t = fit_opto_model(trials_of_subject,nametag=None,gammafit=True)
         params_sklearn['loss'] = loss
         params_sklearn['auc'] = auc
         params_sklearn['method']='sklearn'

@@ -21,3 +21,4 @@ def get_paths(set_name):
     savepath.mkdir(parents=False,exist_ok=True)
 
     return basepath,formatted_path,savepath
+
