@@ -58,7 +58,7 @@ def preproc_av_opto_data(set_name = r'opto\Rinberg'):
             trials['visDiff'] = ev.stim_visDiff/maxV
             trials['audDiff'] = ev.stim_audDiff/maxA
 
-            ev.hemisphere[~ev.is_laserTrial.astype('bool')] =np.nan
+            ev.loc[~ev.is_laserTrial.astype(bool), 'hemisphere'] = np.nan
             trials['hemisphere'] = ev.hemisphere 
             # rewrite nan when nothing is inactivated
 
@@ -173,19 +173,6 @@ def get_benchmark_opto_dataset(subject=1):
 
     return filt_split_trials(trials_of_subject)
 
-def get_region_Rinberg(region = 'SC',reformat = False):
-    set_name  = r'opto\Rinberg'
-
-    if reformat: 
-        preproc_av_opto_data(set_name)
-
-    _,formatted_path,_ = get_paths(set_name)
-    dat_path = list(formatted_path.glob(f'{region}.csv'))
-
-    assert len(dat_path)==1, 'brain region is not found.'
-
-    trials = pd.read_csv(dat_path[0])
-    return trials
 
 
 

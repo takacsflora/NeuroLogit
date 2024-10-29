@@ -78,7 +78,7 @@ class Logit(ABC):
         return metrics.log_loss(y, predictions, normalize=True) 
                         
 
-    def fit(self, X, y, fixed_params={}):
+    def fit(self, X, y, fixed_params={},verbose = True):
         """
         Fit the model using scipy.optimize.minimize.
         X: input features
@@ -100,8 +100,9 @@ class Logit(ABC):
         # Define bounds (if needed)
         trainable_param_bounds = [all_bounds[key] for key in trainable_param_names]
 
-        print('initialising with:')
-        self.print_params()
+        if verbose:
+            print('initialising with:')
+            self.print_params()
 
         # Run optimization
         result = minimize(
@@ -113,7 +114,10 @@ class Logit(ABC):
 
         )
 
-        print(f'fitting result success: {result.success}')
+        if verbose:
+            print(f'fitting result success: {result.success}')
+            if result.success:
+                print(self.params)
 
         # Set the optimized parameters in the model
         optimized_params = {k: v for k, v in zip(trainable_param_names, result.x)}
