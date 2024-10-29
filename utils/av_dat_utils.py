@@ -146,7 +146,7 @@ def filt_split_trials(trials):
         (trials.choice == 0) | (trials.choice == 1)
     ]  # keep only the post-stim correct trials
     n_trials = trials.bias_opto.value_counts().min()
-    trials_ctrl = trials[trials.bias_opto == 0].sample(n_trials, random_state=1)
+    trials_ctrl = trials[trials.bias_opto == 0].sample(n_trials*2, random_state=1)
     trials_opto = trials[trials.bias_opto == 1].sample(n_trials, random_state=1)
     trials = pd.concat([trials_ctrl, trials_opto])
 
@@ -163,17 +163,13 @@ def filt_split_trials(trials):
 
     return trials, X_train, X_test, y_train, y_test
     
-def get_benchmark_opto_dataset(subject=1):
+def get_benchmark_opto_dataset(region = 'SC',subject=1):
     """
     allows the easy call of an example dataset, i.e. subject 1
     """
-    dat_path = r"D:\LogRegression\opto\Rinberg\formatted\SC.csv"
+    dat_path = rf"D:\LogRegression\opto\Rinberg\formatted\{region}.csv"
     trials = pd.read_csv(dat_path)
     trials_of_subject = trials[trials.subject == subject]
 
     return filt_split_trials(trials_of_subject)
-
-
-
-
 

@@ -5,9 +5,13 @@
 
 # %%
 import pandas as pd
+from datetime import datetime
+
+from floras_helpers.io import get_current_timestamp
 
 from utils.av_dat_utils import get_paths, preproc_av_opto_data, filt_split_trials
 import src.models.av_models as model_set
+
 
 def av_batch_fit(set_name = r'opto\Rinberg',reformat = False):
  
@@ -36,19 +40,25 @@ def av_batch_fit(set_name = r'opto\Rinberg',reformat = False):
                 m.fit(X_train,y_train)
 
                 params = pd.DataFrame(m.params,index =[0])
+
+                test_is_opto = (X_test.bias_opto == 1)
                 params['log_loss'] = m.score(X_test,y_test,scorer = 'log_loss')
                 params['auc'] = m.score(X_test,y_test,scorer = 'roc_auc_score')
+
+                params['log_loss_opto'] = m.score(X_test[test_is_opto],y_test[test_is_opto],scorer = 'log_loss')
+                params['auc_opto'] = m.score(X_test[test_is_opto],y_test[test_is_opto],scorer = 'roc_auc_score')
                 params['mouseID'] = mouse
                 params['model'] = model_name  
                 params['region'] = region_path.stem
+                results.append(params)
                 
 
-                results.append(params)
 
 
     results = pd.concat(results, ignore_index=True)
 
-    results.to_csv(save_path)
+
+    results.to_csv(save_path / f'summary_{get_current_timestamp()}.csv')
 
 # %%
 if __name__ == "__main__":

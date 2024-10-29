@@ -5,6 +5,7 @@ setup(
     version='1.0',
     packages=find_packages(),
     install_requires=[
+        "floras_helpers @ git+https://github.com/takacsflora/floras-helpers.git@main"
     ],
     author='Flora Takacs',
     description='Logistic Classification for ephys data and optogentic inactivation',

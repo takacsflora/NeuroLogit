@@ -78,7 +78,7 @@ class Logit(ABC):
         return metrics.log_loss(y, predictions, normalize=True) 
                         
 
-    def fit(self, X, y, fixed_params={},verbose = True):
+    def fit(self, X, y, fixed_params={},verbose = False):
         """
         Fit the model using scipy.optimize.minimize.
         X: input features
