@@ -1,16 +1,16 @@
 # %% 
 import numpy as np
-from utils.dat_utils import get_benchmark_opto_dataset
+from utils.av_dat_utils import get_benchmark_opto_dataset
 from utils.plot_utils import plot_psychometric
 
 trials, X_train, X_test, y_train, y_test = get_benchmark_opto_dataset(subject=1)
 # %%
 from src.models.av_models import av_opto_hemispheric_additive,av_opto_hemispheric_divisive
 
-m = av_opto_hemispheric_divisive()
+m = av_opto_hemispheric_additive()
 m.fit(X_train,y_train)
 
-m.score(X_test,y_test)
+m.score(X_test,y_test,scorer = 'roc_auc_score')
 
 
 # %%
