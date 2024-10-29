@@ -25,8 +25,8 @@ def get_paths(set_name):
 
     return basepath,formatted_path,savepath
 
-
 def preproc_av_opto_data(trials):
+    # todo# preproc it even further by reading directly the data...
     stim_predictors = ["visR", "visL", "audR", "audL", "bias"]
     
     opto_predictors = [
@@ -64,12 +64,12 @@ def preproc_av_opto_data(trials):
     
 
 
-def get_benchmark_opto_dataset():
+def get_benchmark_opto_dataset(subject=1):
     """
     allows the easy call of an example dataset, i.e. subject 1
     """
     dat_path = r"D:\LogRegression\opto\Rinberg\formatted\SC.csv"
     trials = pd.read_csv(dat_path)
-    trials_of_subject = trials[trials.subject == 1]
+    trials_of_subject = trials[trials.subject == subject]
 
     return preproc_av_opto_data(trials_of_subject)

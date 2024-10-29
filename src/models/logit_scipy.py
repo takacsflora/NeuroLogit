@@ -3,7 +3,7 @@
 from abc import ABC, abstractmethod
 import numpy as np
 import pandas as pd
-from sklearn.metrics import log_loss
+import sklearn.metrics as metrics
 from scipy.optimize import minimize
 import matplotlib.pyplot as plt
 
@@ -75,7 +75,7 @@ class Logit(ABC):
 
         # Get predictions and calculate loss
         predictions = self.predict_proba(X) 
-        return log_loss(y, predictions, normalize=True) 
+        return metrics.log_loss(y, predictions, normalize=True) 
                         
 
     def fit(self, X, y, fixed_params={}):
@@ -120,12 +120,16 @@ class Logit(ABC):
         
         self.set_params(optimized_params)
 
-    def score(self, X, y):
+    def score(self, X, y,scorer = 'log_loss',**scorerkwrargs):
         """
         Score the model (e.g., accuracy or log-loss).
         """
-        predictions = self.predict_proba(X)
-        accuracy = np.mean((predictions > 0.5) == y)
-        return accuracy
+        y_pred = self.predict_proba(X)
+
+        scorer_func = getattr(metrics,scorer)
+
+        score = scorer_func(y,y_pred,**scorerkwrargs)
+
+        return score 
 
 

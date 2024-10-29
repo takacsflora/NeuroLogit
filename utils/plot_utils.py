@@ -8,7 +8,6 @@ import matplotlib.pyplot as plt
 # because taking the log inevitably results in runtime errors
 np.seterr(divide="ignore")
 
-
 def plot_psychometric(
     trials, gamma=1, yscale="log", ax=None, dataplotkwargs={"marker": "o", "ls": ""}
 ):
@@ -66,3 +65,5 @@ def plot_psychometric(
         ax.set_ylim([-0.1, 1.1])
 
     ax.axvline(0, color="k", ls="--")
+
+
