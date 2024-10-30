@@ -52,6 +52,8 @@ results = get_param_predictions(results)
 metrics = [
     'log_loss', 
     'auc',
+    'log_loss_opto', 
+    'auc_opto',
     'visL',
     'visR',
     'audR',
@@ -66,11 +68,15 @@ metrics = [
     'biasL_opto_predicted'
     ]
 
-rois = ['Frontal','SC','Vis','Lateral']
+from scipy.stats import wilcoxon,ttest_rel
 
+#rois = ['Frontal','SC','Vis','Lateral']
+metrics = ['log_loss_opto']
+rois  = ['Lateral','Vis']
 for metric in metrics:
     fig, ax = plt.subplots(1,1,figsize = (4,4))
 
+    tot = []
     for roi in rois:
         results_roi =  results[results.region == roi]
         pivot_df = results_roi.pivot_table(index=['mouseID'], columns='model', values = metric)
@@ -79,14 +85,24 @@ for metric in metrics:
                             y='av_opto_hemispheric_divisive',
                             color = colors[roi],edgecolor='k',s=50,linewidth=1,alpha=.9, 
                             ax=ax)
+        
+        tot.append(pivot_df)
+
+    tot = pd.concat(tot,ignore_index=True)
+    _, p = ttest_rel(tot.av_opto_hemispheric_additive.values,
+        tot.av_opto_hemispheric_divisive.values)
 
     ax.axline([0.9,0.9],[1,1],color='k',linestyle='--')
-    ax.axhline(0,color ='k',linestyle='--')
-    ax.axvline(0,color ='k',linestyle='--')
+    # ax.axhline(0,color ='k',linestyle='--')
+    # ax.axvline(0,color ='k',linestyle='--')
 
     ax.set_xlabel('additive')
     ax.set_ylabel('divisive')
-    ax.set_title(metric)
+    ax.set_title(f'{metric}, {rois}, p = {p.round(3)}')
+    ax.set_xlim([.2,.7])
+    ax.set_ylim([.2,.7])
+
+#%%
 
 
 # %%
