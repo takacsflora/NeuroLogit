@@ -115,3 +115,39 @@ ax.set_yscale('log')
 # %%
 results.to_csv(results_path / 'edited.csv')
 # %%
+# check how equivalences hold in the additive moddle
+results['audR_ratio'] = results['audR_opto'] / results['audR']
+results['visR_ratio'] = results['visR_opto'] / results['visR']
+results['audL_ratio'] = results['audL_opto'] / results['audL']
+results['visL_ratio'] = results['visL_opto'] / results['visL']
+
+results['bias_from_vis'] = (results['biasR_opto'] / results['visR_ratio']) - (results['biasL_opto'] / results['visL_ratio']) 
+
+results['bias_from_aud'] = results['biasR_opto'] / results['audR_ratio'] - results['biasL_opto'] / results['audL_ratio'] 
+
+
+additive = results[results.model == 'av_opto_hemispheric_additive']
+# %%
+fig,ax = plt.subplots(1,4,figsize = (12,3))
+
+common_dict = { 
+    'hue': 'region',
+    'palette': colors, 
+    'legend': False
+}
+sns.scatterplot(additive, x = 'visR_ratio', y = 'audR_ratio',ax= ax[0], **common_dict)
+sns.scatterplot(additive, x = 'visL_ratio', y = 'audL_ratio',ax= ax[1], **common_dict)
+sns.scatterplot(additive, x = 'bias_from_vis', y = 'bias',ax= ax[2], **common_dict)
+sns.scatterplot(additive, x = 'bias_from_aud', y = 'bias',ax= ax[3], **common_dict)
+
+for i in range(ax.size):
+    ax[i].axline([0.9,0.9],[1,1],color='k',linestyle='--')
+    ax[i].axhline(0,color ='k',linestyle='--')
+    ax[i].axvline(0,color ='k',linestyle='--')
+
+
+ax[2].set_xlim([-25,25])
+
+
+plt.tight_layout()
+# %%

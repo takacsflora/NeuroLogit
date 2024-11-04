@@ -126,7 +126,7 @@ def preproc_av_opto_data(set_name = r'opto\Rinberg'):
         # for now we don't use the 
         trials.to_csv((formatted_path / cpath.name))
 
-def filt_split_trials(trials):
+def filt_split_trials(trials, test_size = 0.33, balance_sensory = True,balance_control=False):
     # 
     stim_predictors = ["visR", "visL", "audR", "audL", "bias"]
     
@@ -145,20 +145,25 @@ def filt_split_trials(trials):
     trials = trials[
         (trials.choice == 0) | (trials.choice == 1)
     ]  # keep only the post-stim correct trials
-    n_trials = trials.bias_opto.value_counts().min()
-    trials_ctrl = trials[trials.bias_opto == 0].sample(n_trials*2, random_state=1)
-    trials_opto = trials[trials.bias_opto == 1].sample(n_trials, random_state=1)
-    trials = pd.concat([trials_ctrl, trials_opto])
+    if balance_control: 
+        n_trials = trials.bias_opto.value_counts().min()
+        trials_ctrl = trials[trials.bias_opto == 0].sample(n_trials*2, random_state=1)
+        trials_opto = trials[trials.bias_opto == 1].sample(n_trials, random_state=1)
+        trials = pd.concat([trials_ctrl, trials_opto])
 
     X = trials[all_predictors]
     y = trials["choice"]
-    stratifyIDs = trials.trialtype_id
+
+    if balance_sensory:
+        stratifyIDs = trials.trialtype_id
+    else:
+        stratifyIDs = None
     # stratifyIDs = stratifyIDs.fillna(100) # nan means control trials
 
     # balance opto & non-opto trials
 
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.33, random_state=1, shuffle=True, stratify=stratifyIDs
+        X, y, test_size= test_size, random_state=1, shuffle=True, stratify=stratifyIDs
     )
 
     return trials, X_train, X_test, y_train, y_test
