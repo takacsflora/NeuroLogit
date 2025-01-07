@@ -178,3 +178,8 @@ def get_benchmark_opto_dataset(region = 'SC',subject=1):
 
     return filt_split_trials(trials_of_subject)
 
+def preproc_av_ephys_data(set_name = None):
+    """
+    to move here format PinkRigs data -- yeah so this will be that sorts out further stuff...
+    """
+    pass

@@ -55,7 +55,6 @@ class av_pseudoPlotter():
                 y_ = np.log(y_ / (1 - y_))
 
             ax.plot(x_, y_, color=mycolor, **predplotkwargs)
-
 # the av_split model which can have some opto permutations (all rely on parameters audL, audR, visL, visR, bias)
 class av_split(Logit,av_pseudoPlotter):
     def __init__(self,extra_param_names = None,extra_param_init = None, extra_param_bounds = None):
@@ -219,7 +218,6 @@ class av_opto_hemispheric_additive(av_split):
             new.append(a)
 
         self.pseudo = new   
-
 # the divisive model which instead has a biasL/R parameter, but the opto acts on all parameters simultaneously
 class av_opto_hemispheric_divisive(Logit,av_pseudoPlotter):
     def __init__(self):
