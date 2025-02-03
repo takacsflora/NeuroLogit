@@ -189,10 +189,14 @@ def get_ephys_dataset(set_name):
 
     # this is the old structure
     #source_folder = f'D:\AVTrialData\{set_name}\\trial_data'
-
+    
+    if 'lustre' in str(Path.home()):
+        home_rep = '/lustre/home/zcbtfta'
+    else:
+        home_rep = 'D:'
 
     if set_name=='all':
-        source_folder = f'D:\AV_Neural_Data\\trial_data'
+        source_folder = f'{home_rep}\AV_Neural_Data\\trial_data'
         sessions = list(Path(source_folder).glob('*.csv'))
     # parse each session's namestring to subject and date
         session_info = [session.stem.split('_') for session in sessions]
@@ -204,7 +208,7 @@ def get_ephys_dataset(set_name):
 
 
     else:
-        meta_data = pd.read_csv(f'D:\AV_Neural_Data\\meta_data\\{set_name}_sessInfo.csv')
+        meta_data = pd.read_csv(f'{home_rep}\AV_Neural_Data\\meta_data\\{set_name}_sessInfo.csv')
         df = pd.DataFrame({'subject':meta_data.subject.values,'date':meta_data.expDate.values})
     
 

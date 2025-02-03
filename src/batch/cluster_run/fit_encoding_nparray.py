@@ -13,7 +13,7 @@ def train_linears(rank=1):
     
     """
     rank = float(rank)
-    mycwd = Path(os.getcwd())
+    mycwd = Path(os.getcwd()) # this I might change ... 
 
     fit_type = 'passive' # could make this in loop
     dataset = 'all'  # could make this in loop?
@@ -24,6 +24,7 @@ def train_linears(rank=1):
     sessions = get_ephys_dataset(dataset)
 
     for i,(pre_time,(_,args)) in enumerate(itertools.product(pre_times,sessions[['subject','date']].iterrows())):
+        print(i,pre_time,args)
         post_time = pre_time+bin_size        
 
         if 'bin' in time_window:
@@ -45,4 +46,4 @@ def train_linears(rank=1):
             # coefs.to_csv(result_coef_path)
 
 if __name__ == "__main__":  
-   train_linears(rank=2)#sys.argv[1]) 
+   train_linears(rank=sys.argv[1]) 
