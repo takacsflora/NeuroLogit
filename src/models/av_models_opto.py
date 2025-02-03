@@ -35,9 +35,10 @@ class av_pseudoPlotter():
         etc. importantly it takes only one value, which is on purpose. If you are plottign with a covariate, please plot separate predictions.
         
         """
-        for key, value in extra_predictors.items():
-            for df in self.pseudo:
-                df[key] = value
+        if extra_predictors is not None:
+            for key, value in extra_predictors.items():
+                for df in self.pseudo:
+                    df[key] = value
 
 
     def plot_pseudo_predictions(

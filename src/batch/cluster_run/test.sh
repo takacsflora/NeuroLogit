@@ -19,3 +19,8 @@ module load binutils/2.29.1/gnu-4.9.2
 module load ucx/1.9.0/gnu-4.9.2
 module load mpi/openmpi/4.1.1/gnu-4.9.2
 module load mpi4py/3.1.4/gnu-4.9.2
+
+cd NeuroLogit
+pip install --upgrade pip
+pip install psutil 
+pip install .

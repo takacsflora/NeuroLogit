@@ -351,7 +351,8 @@ def prepare_for_fit(ev,fit_type = None):
         ev = ev[(~ev.timeline_choiceMoveOn.isna())|(ev.session=='passive')]
 
     elif (fit_type == 'choice_logit'):
-
+        ev = ev[ev['choice_categorical']!='NoGo']
+        ev = ev[ev['choice_categorical']!='passive']
         ev = ev[(~ev.timeline_choiceMoveOn.isna())]
 
     else:
