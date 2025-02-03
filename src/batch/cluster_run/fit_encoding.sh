@@ -9,9 +9,11 @@
 #$ -l mem=8G
 
 # 11 dataset,15 models/set
-#$ -t 1-1
+#$ -t 1-10
 
 module purge
+module avail  # Check available modules
+
 module load gcc-libs/4.9.2
 module load python3/recommended
 module load compilers/gnu/4.9.2
