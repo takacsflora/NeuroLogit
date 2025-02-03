@@ -31,4 +31,3 @@ pip install .
 
 python src/batch/cluster_run/fit_encoding_nparray.py $SGE_TASK_ID
 
-deactivate

@@ -28,7 +28,7 @@ def train_linears(rank=1):
         post_time = pre_time+bin_size        
 
         if 'bin' in time_window:
-            timings = f'{time_window}_pre_{pre_time}_post_{post_time}'
+            timings = f'{time_window}'#_pre_{pre_time}_post_{post_time}'
         else:
             timings = f'{time_window}'    
 
