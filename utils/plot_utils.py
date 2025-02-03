@@ -66,7 +66,6 @@ def plot_psychometric(
 
     ax.axvline(0, color="k", ls="--")
 
-
 def get_region_colors(show_cbar = True):
     """
     HEX codes of the different brain regions I often use

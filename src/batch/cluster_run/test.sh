@@ -1,4 +1,3 @@
-
 #!/bin/bash -l
 
 
@@ -12,8 +11,6 @@
 #$ -t 1-2
 
 module purge
-module avail  # Check available modules
-
 module load gcc-libs/4.9.2
 module load python3/recommended
 module load compilers/gnu/4.9.2
@@ -22,14 +19,3 @@ module load binutils/2.29.1/gnu-4.9.2
 module load ucx/1.9.0/gnu-4.9.2
 module load mpi/openmpi/4.1.1/gnu-4.9.2
 module load mpi4py/3.1.4/gnu-4.9.2
-
-module load numactl
-module load binutils
-
-cd NeuroLogit
-pip install --upgrade pip
-pip install psutil 
-pip install .
-
-python src/batch/cluster_run/fit_encoding_nparray.py $SGE_TASK_ID
-

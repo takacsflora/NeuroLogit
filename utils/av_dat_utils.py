@@ -350,6 +350,10 @@ def prepare_for_fit(ev,fit_type = None):
         # also if response direction was prior to stimulus onset it will appear as nan in cohiceMoveOn but not in choice, so have to filter out
         ev = ev[(~ev.timeline_choiceMoveOn.isna())|(ev.session=='passive')]
 
+    elif (fit_type == 'choice_logit'):
+
+        ev = ev[(~ev.timeline_choiceMoveOn.isna())]
+
     else:
         print('fit_type not recognised')
 
