@@ -5,7 +5,7 @@ from utils.plot_utils import plot_psychometric
 
 trials, X_train, X_test, y_train, y_test = get_benchmark_opto_dataset(region = 'Frontal', subject=5)
 # %%
-from src.models.av_models import av_opto_hemispheric_additive,av_opto_hemispheric_divisive
+from src.models.av_models_opto import av_opto_hemispheric_additive,av_opto_hemispheric_divisive
 
 m = av_opto_hemispheric_additive()
 m.fit(X_train,y_train)

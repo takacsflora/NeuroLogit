@@ -6,6 +6,8 @@ import pandas as pd
 
 from sklearn.model_selection import train_test_split
 
+from pinkrigs_tools.utils.ev_utils import normalize_event_values
+
 def get_paths(set_name):
     """
     Creates standard path structure for data_management and can recall Paths
@@ -178,8 +180,173 @@ def get_benchmark_opto_dataset(region = 'SC',subject=1):
 
     return filt_split_trials(trials_of_subject)
 
-def preproc_av_ephys_data(set_name = None):
+
+def get_ephys_dataset(set_name):
     """
-    to move here format PinkRigs data -- yeah so this will be that sorts out further stuff...
+    function that finds all sessions within a dataset based on trial data
+
     """
-    pass
+
+    # this is the old structure
+    #source_folder = f'D:\AVTrialData\{set_name}\\trial_data'
+
+
+    if set_name=='all':
+        source_folder = f'D:\AV_Neural_Data\\trial_data'
+        sessions = list(Path(source_folder).glob('*.csv'))
+    # parse each session's namestring to subject and date
+        session_info = [session.stem.split('_') for session in sessions]
+        subjects = [info[0] for info in session_info]
+        dates = [info[1] for info in session_info]
+
+        # create df of all the sesions with subject,date and folder 
+        df = pd.DataFrame({'subject':subjects,'date':dates})
+
+
+    else:
+        meta_data = pd.read_csv(f'D:\AV_Neural_Data\\meta_data\\{set_name}_sessInfo.csv')
+        df = pd.DataFrame({'subject':meta_data.subject.values,'date':meta_data.expDate.values})
+    
+
+
+
+
+    # add set_name to the df    
+    df['set_name'] = set_name
+
+    return df
+
+
+def add_average_to_ev(ev,raster,pre_time = 0.1,post_time = 0.15):
+    """
+    function that adds the average response to the event data
+    """
+    # filter the raster data for the desired timepoints
+    raster_filtered = raster[(raster['Time'] >= -pre_time) & (raster['Time'] <= post_time)]
+    # group by neuron and trial, then calculate the average response
+    average_activity = raster_filtered.groupby(['Feature', 'Trial'])['Response'].mean().unstack()
+    # keep only features that have 'neuron' in them from the average activity
+    #neuron_average_activity = average_activity.loc[average_activity.index.str.contains('neuron')]
+
+    # merge the average activity with the event data
+
+    assert ev.shape[0]==average_activity.shape[1], 'cannot unite as evetns and rasters have different number of trials'
+    ev = ev.merge(average_activity.T, left_index=True, right_index=True)
+
+    return ev
+
+def preproc_events_data(df):
+    # Create a new column 'session' to indicate active or passive session
+    df['session'] = np.where(df['choice'].isna(), 'passive', 'active')
+
+    # Create a new column 'choice_categorical' to categorize choices
+    df['choice_categorical'] = df['choice'].map({-1: 'NoGo', 0: 'left', 1: 'right'})
+    # Update 'choice_categorical' to 'passive' where 'choice' is NaN
+    df['choice_categorical'] = df['choice_categorical'].fillna('passive')
+
+
+
+    # and  we return only the stimulus combinations that are also present in active
+    # add to only < 40% vis contrast too and normalise always to the same number
+
+    # i.e. audAzimuth = [60,0,-60] and visAzimuth = [60,-60]
+    df = df[(df['stim_audAzimuth'].isin([60,0,-60])) & 
+            (df['stim_visAzimuth'].isin([60,-60]) | df['stim_visAzimuth'].isna()) & 
+            (df['stim_visContrast'] <= 0.4)
+            ]
+
+    # recalculate the normalised values (visDiff, audDiff) for the remainder of stimulus combinations
+    df = normalize_event_values(df,maxV = None, maxA = None)
+
+    # Overwrite NaNs in 'choice' column with -2
+    df['choice'].fillna(-2, inplace=True)
+
+    # maybe make sure to return indices? 
+    return df
+
+
+def load_trial_data(subject,date,load_clusters = True,load_raster = None,avg_kwargs=None):
+    """function to call the a particular sessions' trials and clusters data
+
+    Args:
+        set_name (str): which dataset to use
+        subject (str): subject name, Defaults to None.
+        date (str), Defaults to None.
+
+    Returns:
+        _type_: _description_
+    """    
+
+    source_folder = f'D:\AV_Neural_Data'
+
+    session = f'{subject}_{date}'
+
+
+    # deal with the trial data
+    df = pd.read_csv(fr'{source_folder}\trial_data\{session}.csv',low_memory=False)
+
+    
+    if load_clusters:
+        # deal with the cluster data
+        clusters = pd.read_csv(fr'{source_folder}\cluster_data\{session}.csv',low_memory=False)
+        # adding this line to create common column for merging
+        clusters['neuronID'] = clusters['_av_IDs'].apply(lambda x: f'neuron_{x}')
+    else: 
+        clusters = None
+
+    # deal with the spike data
+
+    if load_raster is not None:
+        rasters = pd.read_parquet(fr'{source_folder}\raster_data\{load_raster}\{session}.csv')
+    else: 
+        rasters = None
+        
+    if avg_kwargs is not None: 
+        df = add_average_to_ev(df,rasters,**avg_kwargs)
+
+
+    df = preproc_events_data(df)
+
+    # ensure that the raster data has he same trial indices left as the event data
+    if rasters is not None:
+        rasters = rasters[rasters['Trial'].isin(df.index)]   
+    
+    return { 
+        'ev':df,
+        'clusters':clusters,
+        'rasters':rasters
+    }
+
+
+def prepare_for_fit(ev,fit_type = None):
+    """this function prepares the ev data for fitting by 
+    1) filtering out the trials that are not relevant for the fit (e.g. passive or noGo trials)
+    2) explicitly calculating predictors that will be needed fo the model
+
+    Args:
+        df (pd.df): events with each row as a trial
+        fit_type (str): The identifier for the filtering. Defaults to None.
+    """
+    
+
+    if fit_type == 'passive': 
+        ev = ev[ev['session']=='passive']
+        ev['baseline'] = 1
+
+    elif fit_type == 'engagement':
+        ev = ev[ev['choice_categorical']!='NoGo']
+        ev['baseline'] = 1
+        ev['is_active'] = (ev['session'] == 'active').astype(float)
+
+    elif (fit_type == 'choice')|(fit_type == 'choice_engagement'):
+        ev = ev[ev['choice_categorical']!='NoGo']
+        ev['baseline'] = 1
+        ev['is_active'] = (ev['session'] == 'active').astype(float)
+
+        # also if response direction was prior to stimulus onset it will appear as nan in cohiceMoveOn but not in choice, so have to filter out
+        ev = ev[(~ev.timeline_choiceMoveOn.isna())|(ev.session=='passive')]
+
+    else:
+        print('fit_type not recognised')
+
+    return ev

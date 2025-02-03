@@ -1,7 +1,7 @@
 #%%
 import pandas as pd
 from utils.av_dat_utils import get_paths,filt_split_trials
-from src.models.logit_sklearn import av_opto_sk
+from src.models.mode_base_sklearn import av_opto_sk
 
 set_name  = r'opto/region_comparison/bi'
 _,formatted_path,save_path = get_paths(set_name)

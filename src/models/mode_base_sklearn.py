@@ -11,7 +11,6 @@ from sklearn.feature_selection import SelectFromModel,VarianceThreshold,Sequenti
 from sklearn.pipeline import Pipeline
 from sklearn.linear_model import LogisticRegression
 
-
 class PowerTransformer(BaseEstimator, TransformerMixin):
     def __init__(self, power=2):
         self.power = power
@@ -61,10 +60,9 @@ def fit_model(X,y,power=1,gridCV_vis=False,gridCV_neur=False, neuron_selector='l
     )
 
     
-
     pipeline = Pipeline([
-        ('feature_selector',combined_transformer),
-        ('logistic_regression',LogisticRegression(fit_intercept=False))
+        ('features',combined_transformer),
+        ('regression',LogisticRegression(fit_intercept=False))
     ])
 
     if (not gridCV_vis) and (not gridCV_neur):
@@ -76,13 +74,13 @@ def fit_model(X,y,power=1,gridCV_vis=False,gridCV_neur=False, neuron_selector='l
         
         param_grid = {}
         if gridCV_vis:
-            param_grid['feature_selector__vis__power'] = np.round(np.arange(0.1,2,0.1),2)
+            param_grid['features__vis__power'] = np.round(np.arange(0.1,2,0.1),2)
         
         if gridCV_neur:
             if neuron_selector=='lasso':
-                param_grid['feature_selector__neural__lasso__threshold'] = [0.01,0.05,0.1,0.2,0.3,0.5,1]
+                param_grid['features__neural__lasso__threshold'] = [0.01,0.05,0.1,0.2,0.3,0.5,1]
             if neuron_selector=='sfs':
-                param_grid['feature_selector__neural__sfs__tol'] = [0.001,0.01,0.05,0.1,0.2]
+                param_grid['features__neural__sfs__tol'] = [0.001,0.01,0.05,0.1,0.2]
 
 
         grid_search = GridSearchCV(pipeline, param_grid, cv=5,scoring='neg_log_loss')
@@ -96,16 +94,21 @@ def get_weights(model,return_dropped_preds=True):
     Used specificalyl for the model constructed above 
     """
 
-    feature_names = model.named_steps['feature_selector'].get_feature_names_out()  
-    weights = model.named_steps['logistic_regression'].coef_ 
-    intercept =  model.named_steps['logistic_regression'].intercept_
+    feature_names = model.named_steps['features'].get_feature_names_out()  
+    weights = model.named_steps['regression'].coef_.reshape(1,-1)
+    intercept =  model.named_steps['regression'].intercept_
 
-    assert ('bias' in feature_names) & (intercept[0]==0), 'there is a bias parameter, yet the intercept is not 0 ...'
+    if isinstance(intercept, np.ndarray):
+        intercept = intercept[0]
 
+    if ('bias' in feature_names): 
+        assert (intercept==0), 'there is a bias parameter, yet the intercept is not 0 ...'
+    
+    
     parameters = pd.DataFrame(weights,columns=feature_names)
 
     if return_dropped_preds:
-        orig_features = model.named_steps['feature_selector'].feature_names_in_
+        orig_features = model.named_steps['features'].feature_names_in_
         dropped_features = np.setdiff1d(orig_features,feature_names)
         parameters[dropped_features] = 0
         assert orig_features.size==parameters.size 
@@ -115,13 +118,12 @@ def get_weights(model,return_dropped_preds=True):
     # maybe I will change later not to store all the hyperparameters
     all_parameters={
         'weights':parameters, 
-        'intercept':intercept[0],
+        'intercept':intercept,
         'hyperparameters': model.get_params()
     }
 
     
     return all_parameters
-
 
 def av_opto_sk(rec,nametag=None,**fitkwargs):
 
@@ -160,3 +162,53 @@ def av_opto_sk(rec,nametag=None,**fitkwargs):
     auc_score = roc_auc_score(y_test,y_pred)
 
     return params,neg_log_loss,auc_score
+
+def fit_linear_regression_neural(X,y,power=1,gridCV_vis=False):
+    """this is a function to fit a linear regression model to neural data
+
+    Args:
+        X (pd.df): predictors
+        y (pd.series): neural response
+        power (int, optional): visual power. Defaults to 1.
+        gridCV_vis (bool, optional): whether to grid-search thevisual power. Defaults to False.
+
+    Returns:
+        _type_: _description_
+    """
+    is_vis_predictor = np.isin(X.columns,['visL','visR','visR_opto', 'visL_opto'])
+    
+    combined_transformer = ColumnTransformer(
+        [
+            ('vis',PowerTransformer(power=power),is_vis_predictor)
+         ],
+        remainder='passthrough',
+        force_int_remainder_cols = False,
+        verbose_feature_names_out= False
+    )
+
+    
+
+    pipeline = Pipeline([
+        ('features',combined_transformer),
+       # ('regression',LinearRegression(fit_intercept=False))
+       ('regression',Ridge(alpha=0.000,fit_intercept=False)) # this is faster and more stable
+    ])
+
+    if (not gridCV_vis):
+
+        pipeline.fit(X,y)    
+        return pipeline
+    
+    else:
+        
+        param_grid = {}
+        if gridCV_vis:
+            param_grid['features__vis__power'] = np.round(np.arange(0.01,5,0.1),2)
+         
+        grid_search = GridSearchCV(
+            pipeline, param_grid, cv=5,
+            scoring='neg_root_mean_squared_error',
+            n_jobs=-1)
+        grid_search.fit(X, y)
+
+        return grid_search.best_estimator_

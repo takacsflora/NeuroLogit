@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from .logit_scipy import Logit
+from .model_base_scipy import Logit,LinearRegression
 
 class av_pseudoPlotter():
     def __init__(self):
@@ -29,8 +29,16 @@ class av_pseudoPlotter():
 
         self.pseudo = all_pseudo
 
-    def update_pseudo(self):
-        pass
+    def update_pseudo(self, extra_predictors=None):
+        """
+        this function allows to update the pseudo in a dynamically so that the pseudo-matrix can be plugged directly into the prediction function. For example add baseline==1
+        etc. importantly it takes only one value, which is on purpose. If you are plottign with a covariate, please plot separate predictions.
+        
+        """
+        for key, value in extra_predictors.items():
+            for df in self.pseudo:
+                df[key] = value
+
 
     def plot_pseudo_predictions(
         self, gamma = 1,yscale="log", ax=None, predplotkwargs={"ls": "-"}, **kwargs
@@ -56,6 +64,7 @@ class av_pseudoPlotter():
 
             ax.plot(x_, y_, color=mycolor, **predplotkwargs)
 # the av_split model which can have some opto permutations (all rely on parameters audL, audR, visL, visR, bias)
+    
 class av_split(Logit,av_pseudoPlotter):
     def __init__(self,extra_param_names = None,extra_param_init = None, extra_param_bounds = None):
         # Define the parameter names and initial values

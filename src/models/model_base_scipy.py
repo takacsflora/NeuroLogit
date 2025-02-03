@@ -7,7 +7,11 @@ import sklearn.metrics as metrics
 from scipy.optimize import minimize
 import matplotlib.pyplot as plt
 
-class Logit(ABC):
+class BaseTrainer(ABC):
+    """
+    Base class for a training models with scipy with the option to fix certain parameters and set the bounds.
+
+    """
     def __init__(self, param_names, param_init=None, param_bounds=None):
         # Initialize parameters as a dictionary basically the inial parameter is 1 
         # and the initial bound is (None,None) unless you specify in a dictionary
@@ -48,36 +52,14 @@ class Logit(ABC):
                 raise ValueError(f"Parameter {key} not recognized.")
 
     @abstractmethod
-    def predict_log_proba(self, X):
-        pass
-
-    @staticmethod
-    def raise_to_sigm(logOdds):
-        "function to calculate pR from logOdds"
-        return np.exp(logOdds) / (1 + np.exp(logOdds))
-
-    def predict_proba(self, X):
-        return self.raise_to_sigm(self.predict_log_proba(X))
-
     def predict(self, X):
-        return (self.predict_log_proba(X) > 0).astype('float')
+        pass
     
+    @abstractmethod
     def _objective(self, params, X, y, param_mask, fixed_params):
-        """
-        Objective function to minimize (e.g., negative log-likelihood or squared loss).
-        params: list of trainable parameters
-        param_mask: list indicating which parameters are being trained (1 = trainable, 0 = fixed)
-        fixed_params: the fixed parameters
-        """
-        # Map trainable parameters to the full set
-        full_params = {**fixed_params, **dict(zip(param_mask.keys(), params))}
-        self.set_params(full_params)
-
-        # Get predictions and calculate loss
-        predictions = self.predict_proba(X) 
-        return metrics.log_loss(y, predictions, normalize=True) 
-                        
-
+        pass
+    
+    
     def fit(self, X, y, fixed_params={},verbose = False):
         """
         Fit the model using scipy.optimize.minimize.
@@ -136,4 +118,59 @@ class Logit(ABC):
 
         return score 
 
+class Logit(BaseTrainer):
+        # Call parent class's init to handle the parameter setup
+    def __init__(self, param_names, param_init=None, param_bounds=None):
+        super().__init__(param_names, param_init,param_bounds)
 
+    @staticmethod
+    def raise_to_sigm(logOdds):
+        "function to calculate pR from logOdds"
+        return np.exp(logOdds) / (1 + np.exp(logOdds))
+    
+    @abstractmethod
+    def predict_log_proba(self, X):
+        pass
+
+    def predict_proba(self, X):
+        return self.raise_to_sigm(self.predict_log_proba(X))
+
+    def predict(self, X):
+        return (self.predict_log_proba(X) > 0).astype('float')
+    
+    def _objective(self, params, X, y, param_mask, fixed_params):
+        """
+        Objective function to minimize (e.g., negative log-likelihood or squared loss).
+        params: list of trainable parameters
+        param_mask: list indicating which parameters are being trained (1 = trainable, 0 = fixed)
+        fixed_params: the fixed parameters
+        """
+        # Map trainable parameters to the full set
+        full_params = {**fixed_params, **dict(zip(param_mask.keys(), params))}
+        self.set_params(full_params)
+
+        # Get predictions and calculate loss
+        predictions = self.predict_proba(X) 
+        return metrics.log_loss(y, predictions, normalize=True) 
+    
+class LinearRegression(BaseTrainer):
+    def __init__(self, param_names, param_init=None, param_bounds=None):
+        super().__init__(param_names, param_init,param_bounds)
+
+    def predict(self, X):
+        return np.dot(X, np.array(list(self.params.values())))
+
+    def _objective(self, params, X, y, param_mask, fixed_params):
+        """
+        Objective function to minimize (e.g., negative log-likelihood or squared loss).
+        params: list of trainable parameters
+        param_mask: list indicating which parameters are being trained (1 = trainable, 0 = fixed)
+        fixed_params: the fixed parameters
+        """
+        # Map trainable parameters to the full set
+        full_params = {**fixed_params, **dict(zip(param_mask.keys(), params))}
+        self.set_params(full_params)
+
+        # Get predictions and calculate loss
+        predictions = self.predict(X) 
+        return metrics.mean_squared_error(y, predictions)

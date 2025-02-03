@@ -10,7 +10,7 @@ from datetime import datetime
 from floras_helpers.io import get_current_timestamp
 
 from utils.av_dat_utils import get_paths, preproc_av_opto_data, filt_split_trials
-import src.models.av_models as model_set
+import src.models.av_models_opto as model_set
 
 
 def av_batch_fit(set_name = r'opto\Rinberg',reformat = False):
