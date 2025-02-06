@@ -2,8 +2,8 @@ import os
 import sys
 import itertools
 import numpy as np
-# from src.batch.encoding import fit_session, get_time_params
-# from utils.av_dat_utils import get_ephys_dataset
+from src.batch.encoding import fit_session, get_time_params
+from utils.av_dat_utils import get_ephys_dataset
 
 from pathlib import Path
 
