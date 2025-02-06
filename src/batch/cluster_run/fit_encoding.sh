@@ -11,6 +11,7 @@
 # 11 dataset,15 models/set
 #$ -t 1-2
 
+
 module purge
 module avail  # Check available modules
 
@@ -30,5 +31,12 @@ pip install --upgrade pip
 pip install psutil 
 
 
+# Verify Python and pip versions
+echo "Python version:"
+python3 --version  # Check the version is >= 3.6
+echo "Pip version:"
+pip --version
+
+pip install ./NeuroLogit/
 python NeuroLogit/src/batch/cluster_run/fit_encoding_nparray.py $SGE_TASK_ID
 

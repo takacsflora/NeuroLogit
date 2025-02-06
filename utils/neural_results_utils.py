@@ -57,14 +57,26 @@ def load_results(region = 'SCm',fit_type = 'engagement',time_bin = 'poststim',re
         return coefs
 
 
-def get_region_params(region,random_state = 1,plot_dist = True):
+def select_best_models(coefs):
+    # select the best models
+    coefs_kept = coefs.loc[coefs.groupby(['session', 'neuronID'])['adj_r2'].idxmax()]
+    # also keep only neurons where the adj_r2 is above 0.1
+    coefs_kept = coefs_kept[coefs_kept['adj_r2'] > 0.05]
+
+
+    return coefs_kept
+
+def get_region_params(region,random_state = 1,plot_dist = True,set = 'active'):
 
     coefs = load_results(region = region,fit_type = 'choice_engagement',time_bin = 'poststim')
 
     # keep neurons
 
-    coefs_kept = coefs[(coefs.adj_r2 > 0.01) & (coefs.model_type == 'audiovisual_choice_engaged')]
+    coefs_kept = select_best_models(coefs)
+    # replace NaNs with 0
+    
 
+    #coefs_kept = coefs_kept.fillna(0)
     if plot_dist:
 
         params_to_plot = ['tot_vis_contra', 'tot_vis_ipsi', 'tot_aud_contra', 'tot_aud_ipsi', 'gamma', 'baseline_active']
@@ -93,12 +105,23 @@ def get_region_params(region,random_state = 1,plot_dist = True):
     coefs_kept = coefs_sess_subsampled.sample(n=min(50, len(coefs_sess_subsampled)), random_state=random_state)
     
 
+    if set is 'active':
+        avg_coefs = {
+            'vis_contra':coefs_kept['tot_vis_contra'].sum(),
+            'vis_ipsi':coefs_kept['tot_vis_ipsi'].sum(),
+            'aud_contra':coefs_kept['tot_aud_contra'].sum(),
+            'aud_ipsi':coefs_kept['tot_aud_ipsi'].sum(),
+            'gamma':coefs_kept['gamma'].median(),
+            'baseline':coefs_kept['baseline_active'].sum()
+        }
+    elif set is 'base':
+        avg_coefs = {
+            'vis_contra':coefs_kept['vis_contra'].sum(),
+            'vis_ipsi':coefs_kept['vis_ipsi'].sum(),
+            'aud_contra':coefs_kept['aud_contra'].sum(),
+            'aud_ipsi':coefs_kept['aud_ipsi'].sum(),
+            'gamma':coefs_kept['gamma'].median(),
+            'baseline':coefs_kept['baseline'].sum()
+        }
 
-    return {
-        'vis_contra':coefs_kept['tot_vis_contra'].sum(),
-        'vis_ipsi':coefs_kept['tot_vis_ipsi'].sum(),
-        'aud_contra':coefs_kept['tot_aud_contra'].sum(),
-        'aud_ipsi':coefs_kept['tot_aud_ipsi'].sum(),
-        'gamma':coefs_kept['gamma'].median(),
-        'baseline':coefs_kept['baseline_active'].sum()
-    }
+    return avg_coefs
