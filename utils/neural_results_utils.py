@@ -95,10 +95,10 @@ def get_region_params(region,random_state = 1,plot_dist = True):
 
 
     return {
-        'vis_contra':coefs_kept['tot_vis_contra'].median(),
-        'vis_ipsi':coefs_kept['tot_vis_ipsi'].median(),
-        'aud_contra':coefs_kept['tot_aud_contra'].median(),
-        'aud_ipsi':coefs_kept['tot_aud_ipsi'].median(),
+        'vis_contra':coefs_kept['tot_vis_contra'].sum(),
+        'vis_ipsi':coefs_kept['tot_vis_ipsi'].sum(),
+        'aud_contra':coefs_kept['tot_aud_contra'].sum(),
+        'aud_ipsi':coefs_kept['tot_aud_ipsi'].sum(),
         'gamma':coefs_kept['gamma'].median(),
-        'baseline':coefs_kept['baseline_active'].median()
+        'baseline':coefs_kept['baseline_active'].sum()
     }
