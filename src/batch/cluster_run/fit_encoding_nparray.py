@@ -2,8 +2,8 @@ import os
 import sys
 import itertools
 import numpy as np
-from src.batch.encoding import fit_session, get_time_params
-from utils.av_dat_utils import get_ephys_dataset
+# from src.batch.encoding import fit_session, get_time_params
+# from utils.av_dat_utils import get_ephys_dataset
 
 from pathlib import Path
 
@@ -21,11 +21,13 @@ def train_linears(rank=1):
     bin_size = 0.1 
     pre_times = np.arange(-0.2,0.5,bin_size)
 
-    sessions = get_ephys_dataset(dataset)
+    print(pre_times)
 
-    for i,(pre_time,(_,args)) in enumerate(itertools.product(pre_times,sessions[['subject','date']].iterrows())):
-        print(i,pre_time,args)
-        post_time = pre_time+bin_size        
+    # sessions = get_ephys_dataset(dataset)
+
+    # for i,(pre_time,(_,args)) in enumerate(itertools.product(pre_times,sessions[['subject','date']].iterrows())):
+    #     print(i,pre_time,args)
+    #     post_time = pre_time+bin_size        
 
         # if 'bin' in time_window:
         #     timings = f'{time_window}'#_pre_{pre_time}_post_{post_time}'

@@ -26,10 +26,9 @@ module load mpi4py/3.1.4/gnu-4.9.2
 module load numactl
 module load binutils
 
-cd NeuroLogit
 pip install --upgrade pip
 pip install psutil 
-pip install .
 
-python src/batch/cluster_run/fit_encoding_nparray.py $SGE_TASK_ID
+
+python NeuroLogit/src/batch/cluster_run/fit_encoding_nparray.py $SGE_TASK_ID
 
