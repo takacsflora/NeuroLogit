@@ -187,8 +187,8 @@ def get_ephys_dataset(set_name):
 
     # this is the old structure
     #source_folder = f'D:\AVTrialData\{set_name}\\trial_data'
-    
-    if 'lustre' in str(Path.home()):
+    print(Path.home())
+    if 'zcbtfta' in str(Path.home()):
         home_rep = '/lustre/home/zcbtfta'
 
     else:
