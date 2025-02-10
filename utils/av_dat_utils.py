@@ -190,7 +190,7 @@ def get_ephys_dataset(set_name):
     print(Path.home())
     if 'zcbtfta' in str(Path.home()):
         home_rep = '/lustre/home/zcbtfta'
-        source_folder = f'{home_rep}/AV_Neural_Data/trial_data'
+        source_folder = f'{home_rep}/AV_Neural_data/trial_data'
     else:
         home_rep = 'D:'
         source_folder = f'{home_rep}\\AV_Neural_Data\\trial_data'
