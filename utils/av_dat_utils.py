@@ -190,12 +190,15 @@ def get_ephys_dataset(set_name):
     print(Path.home())
     if 'zcbtfta' in str(Path.home()):
         home_rep = '/lustre/home/zcbtfta'
-
+        source_folder = f'{home_rep}/AV_Neural_Data/trial_data'
     else:
         home_rep = 'D:'
+        source_folder = f'{home_rep}\\AV_Neural_Data\\trial_data'
+
     print(home_rep)
+    print(source_folder)
+    print(Path(source_folder).is_dir())
     if set_name=='all':
-        source_folder = f'{home_rep}\AV_Neural_Data\\trial_data'
         sessions = list(Path(source_folder).glob('*.csv'))
     # parse each session's namestring to subject and date
         session_info = [session.stem.split('_') for session in sessions]
