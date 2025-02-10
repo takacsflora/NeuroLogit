@@ -190,9 +190,10 @@ def get_ephys_dataset(set_name):
     
     if 'lustre' in str(Path.home()):
         home_rep = '/lustre/home/zcbtfta'
+
     else:
         home_rep = 'D:'
-
+    print(home_rep)
     if set_name=='all':
         source_folder = f'{home_rep}\AV_Neural_Data\\trial_data'
         sessions = list(Path(source_folder).glob('*.csv'))
