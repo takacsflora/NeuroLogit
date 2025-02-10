@@ -7,6 +7,7 @@ setup(
     install_requires=[
         "floras_helpers @ git+https://github.com/takacsflora/floras-helpers.git@main",
         "plotly",
+        "seaborn",
     ],
     author='Flora Takacs',
     description='Logistic Classification for ephys data and optogentic inactivation',
