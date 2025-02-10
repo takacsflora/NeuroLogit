@@ -9,11 +9,10 @@
 #$ -l mem=8G
 
 # 11 dataset,15 models/set
-#$ -t 1-2
+#$ -t 1-1
 
 
 module purge
-module avail  # Check available modules
 
 module load gcc-libs/4.9.2
 module load python3/recommended
@@ -27,16 +26,15 @@ module load mpi4py/3.1.4/gnu-4.9.2
 module load numactl
 module load binutils
 
-pip install --upgrade pip
-pip install psutil 
+# pip install --upgrade pip
 
 
-# Verify Python and pip versions
-echo "Python version:"
-python3 --version  # Check the version is >= 3.6
-echo "Pip version:"
-pip --version
+# # Verify Python and pip versions
+# echo "Python version:"
+# python3 --version  # Check the version is >= 3.6
+# echo "Pip version:"
+# pip --version
 
-pip install ./NeuroLogit/
-python NeuroLogit/src/batch/cluster_run/fit_encoding_nparray.py $SGE_TASK_ID
+# pip install ./NeuroLogit
+# python NeuroLogit/src/batch/cluster_run/fit_encoding_nparray.py $SGE_TASK_ID
 

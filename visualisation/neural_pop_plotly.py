@@ -10,10 +10,10 @@ from plotly.subplots import make_subplots
 from scipy.stats import ttest_rel
 from itertools import combinations
 
-from utils.neural_results_utils import load_results
+from utils.neural_results_utils import load_results,select_best_models
 
-def plot_param_changes(coefs, model_type, active_params):
-    coefs = coefs[coefs.model_type==model_type]
+def plot_param_changes(coefs, active_params):
+    #coefs = coefs[coefs.model_type==model_type]
 
     n_params = len(active_params)
 
@@ -48,18 +48,21 @@ def plot_param_changes(coefs, model_type, active_params):
     fig.show()
 
 
-def plot_param_covariation(coefs, model_type, params1,params2):
-    coefs = coefs[coefs.model_type==model_type]
+def plot_param_covariation(coefs, params1,params2,fig=None):
+    #coefs = coefs[coefs.model_type==model_type]
 
     n_params = len(params1)
 
-    fig = make_subplots(rows=1, cols=n_params, shared_xaxes=False, shared_yaxes=False)
+    if fig is None: 
+        fig = make_subplots(rows=1, cols=n_params, shared_xaxes=False, shared_yaxes=False)
+    
+    
     line_style = dict(color="black", width=1, dash="dash")
 
     for i, (p1,p2) in enumerate(zip(params1,params2)):
 
 
-        scatter = px.scatter(coefs, x=p1, y=p2, color='session', hover_data=['neuronID'])
+        scatter = px.scatter(coefs, x=p1, y=p2, color='session', hover_data=['neuronID','model_type'])
         
         # Compute the correlation between the values
         correlation = coefs[[p1, p2]].corr().iloc[0, 1]
@@ -82,7 +85,7 @@ def plot_param_covariation(coefs, model_type, params1,params2):
         fig.update_xaxes(title_text=p1, row=1, col=i+1)
         fig.update_yaxes(title_text=p2, row=1, col=i+1)
 
-    fig.update_layout(height=700, width=700*n_params)
+    fig.update_layout(height=300, width=300*n_params)
     fig.show()
 
 def plot_adj_r2_scores(coefs, model_types):
@@ -127,24 +130,49 @@ def plot_adj_r2_scores(coefs, model_types):
     fig.show()
 
 
-coefs = load_results(region = 'SCm',fit_type = 'choice_engagement',time_bin = 'poststim')
+# load all neurons
 
+coefs = load_results(region = 'MOs',fit_type = 'choice_engagement',time_bin = 'poststim')
 
 #%%
-
-# how much engagement modulates the params
-active_params = ['vis_ipsi_active', 'vis_contra_active', 'baseline_active']
-active_params = ['vis_ipsi_active', 'vis_contra_active','aud_ipsi_active', 'aud_contra_active', 'baseline_active']
-
-plot_param_changes(coefs, 'audiovisual_engagement_gain',  active_params) 
-
-
-plot_param_covariation(coefs, 'vis_engagement_gain', ['baseline_active'],['vis_contra_active'])
-
 
 model_types = ['vis_engagement','vis_engagement_gain','vis']
 model_types = ['baseline_engagement','baseline_choice_engaged','vis_engagement_gain','aud_engagement_gain']
 plot_adj_r2_scores(coefs, model_types)
+
+
+
+
+
+#%%
+coefs_selected = select_best_models(coefs)
+# how much engagement modulates the params
+active_params = ['vis_ipsi_active', 'vis_contra_active', 'baseline_active']
+active_params = ['vis_ipsi_active', 'vis_contra_active','aud_ipsi_active', 'aud_contra_active', 'baseline_active']
+
+plot_param_changes(coefs_selected,  active_params) 
+
+
+
+
+
+
+
+pairs = [
+    ('baseline_active', 'vis_contra_active'),
+    ('baseline_active', 'vis_ipsi_active'),
+    ('baseline_active', 'aud_ipsi_active'),
+    ('baseline_active', 'aud_contra_active'),
+    ('vis_contra', 'aud_contra'),
+    ('tot_vis_contra', 'tot_aud_contra'),
+    ('tot_vis_contra', 'choice_contra'),
+    ('tot_aud_contra', 'choice_contra'),
+    ('baseline_active', 'choice_contra')
+]
+
+params1, params2 = zip(*pairs)
+
+plot_param_covariation(coefs_selected, params1, params2)
 
 #%%
 

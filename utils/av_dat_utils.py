@@ -6,8 +6,6 @@ import pandas as pd
 
 from sklearn.model_selection import train_test_split
 
-from pinkrigs_tools.utils.ev_utils import normalize_event_values
-
 def get_paths(set_name):
     """
     Creates standard path structure for data_management and can recall Paths
@@ -220,6 +218,37 @@ def get_ephys_dataset(set_name):
 
     return df
 
+def calculate_differences(ev):
+        ev.visDiff = ev.stim_visContrast * np.sign(ev.stim_visAzimuth)
+        ev.visDiff[np.isnan(ev.visDiff)] = 0
+
+        unique_audAmps = np.unique(ev.stim_audAmplitude)
+        assert (unique_audAmps!=0).sum()==1, 'more than 1 SPLs are played so audDiff is complex to calculate. Currently audDiff is just realted to auditory azimuth..'
+        ev.audDiff = ev.stim_audAzimuth.copy()
+        ev.audDiff[np.isnan(ev.audDiff)] = 0
+
+        return ev
+
+def normalize_event_values(ev,maxV=None,maxA=None):
+        ev = calculate_differences(ev)
+        
+        if maxV is None:
+                maxV = np.max(np.abs(ev.visDiff)) 
+
+        if maxA is None:
+                maxA = np.max(np.abs(ev.audDiff))
+        ev['visDiff']=ev.visDiff/maxV
+        ev['audDiff']=ev.audDiff/maxA
+        # also the option to lateralise them
+        ev['visR']=np.abs(ev.visDiff)*(ev.visDiff>0)
+        ev['visL']=np.abs(ev.visDiff)*(ev.visDiff<0)
+        ev['audR']=np.abs(ev.audDiff)*(ev.audDiff>0)
+        ev['audL']=np.abs(ev.audDiff)*(ev.audDiff<0)
+
+        if hasattr(ev,'response_direction'): 
+                ev['choice'] = ev.response_direction-1
+                ev['feedback'] = ev.response_feedback
+        return ev
 
 def add_average_to_ev(ev,raster,pre_time = 0.1,post_time = 0.15):
     """

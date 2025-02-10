@@ -17,18 +17,49 @@ df,clusters,rasters = load_trial_data('AV005','2022-05-18',
                             load_clusters=True,load_raster='choice',
                             avg_kwargs={'pre_time':0.1,'post_time':0}).values()
 
+
+#%%
 added_conditions = ['choice','visDiff','audDiff','choice_categorical']
 rasters = rasters.merge(df[added_conditions], left_on='Trial', right_index=True, how='left')
-
-
-#
 
 # plot the behaviour so the fraction of choices per visDiff and audDiff
 average_choice = df[df.choice >= 0].groupby(['visDiff', 'audDiff'])['choice'].mean().reset_index()
 sns.scatterplot(x='visDiff', y='choice', hue='audDiff', data=average_choice,palette='coolwarm')
 
+#%%
+# Create a 2D plot where x axis is visDiff, y axis is audDiff, and hue depends on the fraction of choices that were 1
+choice_fraction = df[df.choice >= 0].groupby(['visDiff', 'audDiff']).agg(
+    choice_mean=('choice', 'mean'),
+    trial_count=('choice', 'size')
+).reset_index()
+# Adjust the text to be in the middle of each square
+# Create a pivot table to reshape the data for matshow
+pivot_table = choice_fraction.pivot('audDiff', 'visDiff', 'choice_mean')
 
-#
+# Plot the matrix using matshow
+fig, ax = plt.subplots(figsize=(10, 8))
+cax = ax.matshow(pivot_table, cmap='coolwarm')
+# Adjust the colorbar height
+fig.colorbar(cax, ax=ax, fraction=0.01, pad=0.04, label='Fraction of right choices')
+
+# Annotate each cell with the fraction of choices and trial count
+# Reverse the y-axis to make audDiff decrease from bottom to top
+for (i, j), val in np.ndenumerate(pivot_table):
+    trial_count = choice_fraction[(choice_fraction['audDiff'] == pivot_table.index[i]) & 
+                                  (choice_fraction['visDiff'] == pivot_table.columns[j])]['trial_count'].values[0]
+    ax.text(j, i, f'{val:.2f}\n({trial_count})', ha='center', va='center', color='black')
+
+ax.set_xlabel('Visual Difference')
+ax.set_ylabel('Auditory Difference')
+ax.set_xticks(range(len(pivot_table.columns)))
+ax.set_xticklabels(pivot_table.columns)
+ax.set_yticks(range(len(pivot_table.index)))
+ax.set_yticklabels(pivot_table.index)
+ax.invert_yaxis()
+
+plt.show()
+
+#%%
 df = prepare_for_fit(df,fit_type=fit_type)
 
 # load the results and pick what was selected as the best model 

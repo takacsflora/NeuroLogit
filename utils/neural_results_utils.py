@@ -54,6 +54,8 @@ def load_results(region = 'SCm',fit_type = 'engagement',time_bin = 'poststim',re
 
         coefs = add_active_to_base(coefs)
 
+        coefs['choice_contra']=(coefs.hemi*coefs.choice)
+
         return coefs
 
 
@@ -79,7 +81,7 @@ def get_region_params(region,random_state = 1,plot_dist = True,set = 'active'):
     #coefs_kept = coefs_kept.fillna(0)
     if plot_dist:
 
-        params_to_plot = ['tot_vis_contra', 'tot_vis_ipsi', 'tot_aud_contra', 'tot_aud_ipsi', 'gamma', 'baseline_active']
+        params_to_plot = ['tot_vis_contra', 'tot_vis_ipsi', 'tot_aud_contra', 'tot_aud_ipsi', 'gamma', 'baseline_active','baseline','choice_contra']
         n_params = len(params_to_plot)
         _, axs = plt.subplots(1, n_params, figsize=(n_params*3, 3))
 
@@ -105,7 +107,7 @@ def get_region_params(region,random_state = 1,plot_dist = True,set = 'active'):
     coefs_kept = coefs_sess_subsampled.sample(n=min(50, len(coefs_sess_subsampled)), random_state=random_state)
     
 
-    if set is 'active':
+    if set == 'active':
         avg_coefs = {
             'vis_contra':coefs_kept['tot_vis_contra'].sum(),
             'vis_ipsi':coefs_kept['tot_vis_ipsi'].sum(),
@@ -114,7 +116,19 @@ def get_region_params(region,random_state = 1,plot_dist = True,set = 'active'):
             'gamma':coefs_kept['gamma'].median(),
             'baseline':coefs_kept['baseline_active'].sum()
         }
-    elif set is 'base':
+
+    elif set == 'choice':
+        avg_coefs = {
+            'vis_contra':coefs_kept['tot_vis_contra'].sum(),
+            'vis_ipsi':coefs_kept['tot_vis_ipsi'].sum(),
+            'aud_contra':coefs_kept['tot_aud_contra'].sum(),
+            'aud_ipsi':coefs_kept['tot_aud_ipsi'].sum(),
+            'gamma':coefs_kept['gamma'].median(),
+            'baseline':coefs_kept['baseline_active'].sum(),
+            'choice_contra':coefs_kept['choice_contra'].sum(),
+        }  
+
+    elif set == 'passive':
         avg_coefs = {
             'vis_contra':coefs_kept['vis_contra'].sum(),
             'vis_ipsi':coefs_kept['vis_ipsi'].sum(),
