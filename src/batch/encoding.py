@@ -267,19 +267,19 @@ def fit_all_neurons(df,fit_type='passive'):
     return coefs
 
 def fit_session(fit_type='passive',**args):
-    try:
-        df,clusters,_  = load_trial_data(**args).values()
-        kept_clusInfo  = ['neuronID', 'hemi', 'bombcell_class','is_good','BerylAcronym','ml', 'ap', 'dv','probeID','firing_rate','amp_median']
-        print('loaded, fitting session now ...')
-        coefs  = fit_all_neurons(df,fit_type = fit_type)
-        coefs = coefs.merge(clusters[kept_clusInfo], on='neuronID', how='left')
+    # try:
+    df,clusters,_  = load_trial_data(**args).values()
+    kept_clusInfo  = ['neuronID', 'hemi', 'bombcell_class','is_good','BerylAcronym','ml', 'ap', 'dv','probeID','firing_rate','amp_median']
+    print('loaded, fitting session now ...')
+    coefs  = fit_all_neurons(df,fit_type = fit_type)
+    coefs = coefs.merge(clusters[kept_clusInfo], on='neuronID', how='left')
 
-        # add subject and date to coefs dataframe
-        coefs['subject'] = args['subject']
-        coefs['date'] = args['date']
+    # add subject and date to coefs dataframe
+    coefs['subject'] = args['subject']
+    coefs['date'] = args['date']
 
-        return coefs
-    except:
-        print(f'Error in session {args}')
-        return None
+    return coefs
+    # except:
+    #     print(f'Error in session {args}')
+    #     return None
     

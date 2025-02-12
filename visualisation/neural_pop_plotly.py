@@ -78,14 +78,14 @@ def plot_param_covariation(coefs, params1,params2,fig=None):
         min_val = min(x_min, y_min)
         max_val = max(x_max, y_max)
 
-        fig.add_shape(type="line", x0=min_val, y0=min_val, x1=max_val, y1=max_val, line=line_style, row=1, col=i+1)
+        #fig.add_shape(type="line", x0=min_val, y0=min_val, x1=max_val, y1=max_val, line=line_style, row=1, col=i+1)
         fig.add_shape(type="line", x0=min_val, y0=0, x1=max_val, y1=0, line=line_style, row=1, col=i+1)
         fig.add_shape(type="line", x0=0, y0=min_val, x1=0, y1=max_val, line=line_style, row=1, col=i+1)
         
         fig.update_xaxes(title_text=p1, row=1, col=i+1)
         fig.update_yaxes(title_text=p2, row=1, col=i+1)
 
-    fig.update_layout(height=300, width=300*n_params)
+    fig.update_layout(height=450, width=450*n_params)
     fig.show()
 
 def plot_adj_r2_scores(coefs, model_types):
@@ -132,7 +132,7 @@ def plot_adj_r2_scores(coefs, model_types):
 
 # load all neurons
 
-coefs = load_results(region = 'SCm',fit_type = 'choice_engagement',time_bin = 'poststim')
+coefs = load_results(region = 'MOs',fit_type = 'choice_engagement',time_bin = 'poststim')
 
 #%%
 
@@ -163,6 +163,13 @@ pairs = [
     ('baseline_active', 'vis_ipsi_active'),
     ('baseline_active', 'aud_ipsi_active'),
     ('baseline_active', 'aud_contra_active'),
+]
+
+params1, params2 = zip(*pairs)
+plot_param_covariation(coefs_selected, params1, params2)
+
+
+pairs = [
     ('vis_contra', 'aud_contra'),
     ('tot_vis_contra', 'tot_aud_contra'),
     ('tot_vis_contra', 'choice_contra'),
@@ -171,7 +178,17 @@ pairs = [
 ]
 
 params1, params2 = zip(*pairs)
+plot_param_covariation(coefs_selected, params1, params2)
 
+
+pairs = [
+    ('baseline_active', 'tot_vis_contra'),
+    ('baseline_active', 'tot_vis_ipsi'),
+    ('baseline_active', 'tot_aud_contra'),
+    ('baseline_active', 'tot_aud_ipsi'),
+]
+
+params1, params2 = zip(*pairs)
 plot_param_covariation(coefs_selected, params1, params2)
 
 #%%
