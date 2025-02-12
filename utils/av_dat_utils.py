@@ -178,6 +178,22 @@ def get_benchmark_opto_dataset(region = 'SC',subject=1):
 
     return filt_split_trials(trials_of_subject)
 
+def get_source_folder(dat_type='trial_data'):
+    print(Path.home())
+    if 'zcbtfta' in str(Path.home()):
+        home_rep = '/lustre/home/zcbtfta'
+        source_folder = f'{home_rep}/AV_Neural_data/{dat_type}'
+        print(source_folder)
+
+    else:
+        home_rep = 'D:'
+        source_folder = f'{home_rep}\\AV_Neural_Data\\{dat_type}'
+
+    print(home_rep)
+    print(Path(source_folder).is_dir())
+
+
+    return source_folder
 
 def get_ephys_dataset(set_name):
     """
@@ -185,20 +201,9 @@ def get_ephys_dataset(set_name):
 
     """
 
-    # this is the old structure
-    #source_folder = f'D:\AVTrialData\{set_name}\\trial_data'
-    print(Path.home())
-    if 'zcbtfta' in str(Path.home()):
-        home_rep = '/lustre/home/zcbtfta'
-        source_folder = f'{home_rep}/AV_Neural_data/trial_data'
-        print(source_folder)
+    source_folder = get_source_folder('trial_data')
 
-    else:
-        home_rep = 'D:'
-        source_folder = f'{home_rep}\\AV_Neural_Data\\trial_data'
 
-    print(home_rep)
-    print(Path(source_folder).is_dir())
     if set_name=='all':
         sessions = list(Path(source_folder).glob('*.csv'))
     # parse each session's namestring to subject and date
@@ -211,11 +216,11 @@ def get_ephys_dataset(set_name):
 
 
     else:
-        meta_data = pd.read_csv(f'{home_rep}\AV_Neural_Data\\meta_data\\{set_name}_sessInfo.csv')
+
+        source_folder = get_source_folder('meta_data')
+        meta_data = pd.read_csv(f'{source_folder}\\{set_name}_sessInfo.csv')
         df = pd.DataFrame({'subject':meta_data.subject.values,'date':meta_data.expDate.values})
     
-
-
 
 
     # add set_name to the df    
@@ -315,18 +320,20 @@ def load_trial_data(subject,date,load_clusters = True,load_raster = None,avg_kwa
         _type_: _description_
     """    
 
-    source_folder = f'D:\AV_Neural_Data'
+    trial_data_source = get_source_folder('trial_data')
+    cluster_data_source = get_source_folder('cluster_data')
+    raster_data_source = get_source_folder('raster_data')
 
     session = f'{subject}_{date}'
 
 
     # deal with the trial data
-    df = pd.read_csv(fr'{source_folder}\trial_data\{session}.csv',low_memory=False)
+    df = pd.read_csv(fr'{trial_data_source}\{session}.csv',low_memory=False)
 
     
     if load_clusters:
         # deal with the cluster data
-        clusters = pd.read_csv(fr'{source_folder}\cluster_data\{session}.csv',low_memory=False)
+        clusters = pd.read_csv(fr'{cluster_data_source}\{session}.csv',low_memory=False)
         # adding this line to create common column for merging
         clusters['neuronID'] = clusters['_av_IDs'].apply(lambda x: f'neuron_{x}')
     else: 
@@ -335,7 +342,7 @@ def load_trial_data(subject,date,load_clusters = True,load_raster = None,avg_kwa
     # deal with the spike data
 
     if load_raster is not None:
-        rasters = pd.read_parquet(fr'{source_folder}\raster_data\{load_raster}\{session}.csv')
+        rasters = pd.read_parquet(fr'{raster_data_source}\{load_raster}\{session}.csv')
     else: 
         rasters = None
         

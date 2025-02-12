@@ -19,11 +19,13 @@ def train_linears(rank=1):
     dataset = 'all'  # could make this in loop?
     time_window = 'stim_bin' # could make this in loop
     bin_size = 0.1 
-    pre_times = np.arange(-0.2,0.5,bin_size)
+    pre_times = np.round(np.arange(-0.2,0.5,bin_size),2)
 
     print(pre_times)
 
     sessions = get_ephys_dataset(dataset)
+    
+    print(f'found {sessions.shape[0]} sessions')
 
     for i,(pre_time,(_,args)) in enumerate(itertools.product(pre_times,sessions[['subject','date']].iterrows())):
         print(i,pre_time,args)
@@ -48,4 +50,4 @@ def train_linears(rank=1):
             coefs.to_csv(result_coef_path)
 
 if __name__ == "__main__":  
-   train_linears(rank=sys.argv[1]) 
+   train_linears(rank=1) 
