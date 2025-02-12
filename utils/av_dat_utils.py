@@ -193,7 +193,7 @@ def get_source_folder(dat_type='trial_data'):
     print(Path(source_folder).is_dir())
 
 
-    return source_folder
+    return Path(source_folder)
 
 def get_ephys_dataset(set_name):
     """
@@ -205,7 +205,7 @@ def get_ephys_dataset(set_name):
 
 
     if set_name=='all':
-        sessions = list(Path(source_folder).glob('*.csv'))
+        sessions = list(source_folder.glob('*.csv'))
     # parse each session's namestring to subject and date
         session_info = [session.stem.split('_') for session in sessions]
         subjects = [info[0] for info in session_info]
@@ -218,7 +218,7 @@ def get_ephys_dataset(set_name):
     else:
 
         source_folder = get_source_folder('meta_data')
-        meta_data = pd.read_csv(f'{source_folder}\\{set_name}_sessInfo.csv')
+        meta_data = pd.read_csv(source_folder / f'{set_name}_sessInfo.csv')
         df = pd.DataFrame({'subject':meta_data.subject.values,'date':meta_data.expDate.values})
     
 
@@ -326,14 +326,14 @@ def load_trial_data(subject,date,load_clusters = True,load_raster = None,avg_kwa
 
     session = f'{subject}_{date}'
 
+    print((trial_data_source / f'{session}.csv').is_file())
 
-    # deal with the trial data
-    df = pd.read_csv(fr'{trial_data_source}\{session}.csv',low_memory=False)
+    df = pd.read_csv((trial_data_source / f'{session}.csv'),low_memory=False)
 
     
     if load_clusters:
         # deal with the cluster data
-        clusters = pd.read_csv(fr'{cluster_data_source}\{session}.csv',low_memory=False)
+        clusters = pd.read_csv((cluster_data_source / f'{session}.csv'),low_memory=False)
         # adding this line to create common column for merging
         clusters['neuronID'] = clusters['_av_IDs'].apply(lambda x: f'neuron_{x}')
     else: 
@@ -342,7 +342,7 @@ def load_trial_data(subject,date,load_clusters = True,load_raster = None,avg_kwa
     # deal with the spike data
 
     if load_raster is not None:
-        rasters = pd.read_parquet(fr'{raster_data_source}\{load_raster}\{session}.csv')
+        rasters = pd.read_parquet(raster_data_source / load_raster / f'{session}.csv')
     else: 
         rasters = None
         
