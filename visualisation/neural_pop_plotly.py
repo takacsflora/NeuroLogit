@@ -132,7 +132,7 @@ def plot_adj_r2_scores(coefs, model_types):
 
 # load all neurons
 
-coefs = load_results(region = 'MOs',fit_type = 'choice_engagement',time_bin = 'poststim')
+coefs = load_results(region = 'SCm',fit_type = 'choice_engagement',time_bin = 'poststim')
 
 #%%
 

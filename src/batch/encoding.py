@@ -255,6 +255,7 @@ def fit_all_neurons(df,fit_type='passive'):
 
     nrns_extracted = np.array([k for k in df.columns if 'neuron' in k]) 
 
+    print('I even got here')
     models = get_model_set(fit_type=fit_type)
     results = Parallel(n_jobs=-1)(
         delayed(fit_nrn)(df,neuron,models[model],model_name = model,fitter='scipy',return_model=False)
@@ -269,6 +270,7 @@ def fit_session(fit_type='passive',**args):
     try:
         df,clusters,_  = load_trial_data(**args).values()
         kept_clusInfo  = ['neuronID', 'hemi', 'bombcell_class','is_good','BerylAcronym','ml', 'ap', 'dv','probeID','firing_rate','amp_median']
+        print('loaded, fitting session now ...')
         coefs  = fit_all_neurons(df,fit_type = fit_type)
         coefs = coefs.merge(clusters[kept_clusInfo], on='neuronID', how='left')
 

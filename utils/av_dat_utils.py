@@ -349,7 +349,7 @@ def load_trial_data(subject,date,load_clusters = True,load_raster = None,avg_kwa
     if avg_kwargs is not None: 
         df = add_average_to_ev(df,rasters,**avg_kwargs)
 
-
+    print('done loading')
     df = preproc_events_data(df)
 
     # ensure that the raster data has he same trial indices left as the event data
