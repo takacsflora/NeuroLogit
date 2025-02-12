@@ -18,7 +18,7 @@ def plot_param_changes(coefs, active_params):
     n_params = len(active_params)
 
 
-    fig = make_subplots(rows=1, cols=n_params, shared_xaxes=False, shared_yaxes=False, subplot_titles=active_params)
+    fig = make_subplots(rows=1, cols=n_params, shared_xaxes=True, shared_yaxes=True, subplot_titles=active_params)
     line_style = dict(color="black", width=1, dash="dash")
     for i, param in enumerate(active_params):
         base_param = param.replace('_active', '')
@@ -54,7 +54,7 @@ def plot_param_covariation(coefs, params1,params2,fig=None):
     n_params = len(params1)
 
     if fig is None: 
-        fig = make_subplots(rows=1, cols=n_params, shared_xaxes=False, shared_yaxes=False)
+        fig = make_subplots(rows=1, cols=n_params, shared_xaxes=True, shared_yaxes=True)
     
     
     line_style = dict(color="black", width=1, dash="dash")
@@ -132,7 +132,7 @@ def plot_adj_r2_scores(coefs, model_types):
 
 # load all neurons
 
-coefs = load_results(region = 'MOs',fit_type = 'choice_engagement',time_bin = 'poststim')
+coefs = load_results(region = 'SCm',fit_type = 'choice_engagement',time_bin = 'poststim')
 
 #%%
 
@@ -146,6 +146,7 @@ plot_adj_r2_scores(coefs, model_types)
 
 #%%
 coefs_selected = select_best_models(coefs)
+coefs_selected.fillna(0)
 # how much engagement modulates the params
 active_params = ['vis_ipsi_active', 'vis_contra_active', 'baseline_active']
 active_params = ['vis_ipsi_active', 'vis_contra_active','aud_ipsi_active', 'aud_contra_active', 'baseline_active']
