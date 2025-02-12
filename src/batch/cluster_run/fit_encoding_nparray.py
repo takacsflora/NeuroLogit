@@ -50,4 +50,4 @@ def train_linears(rank=1):
             coefs.to_csv(result_coef_path)
 
 if __name__ == "__main__":  
-   train_linears(rank=2) 
+   train_linears(rank=3) 

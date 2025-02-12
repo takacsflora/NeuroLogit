@@ -343,7 +343,9 @@ def load_trial_data(subject,date,load_clusters = True,load_raster = None,avg_kwa
     # deal with the spike data
 
     if load_raster is not None:
-        rasters = pd.read_parquet(raster_data_source / load_raster / f'{session}.csv')
+        raster_path = raster_data_source / load_raster / f'{session}.csv'
+        print(raster_path.is_file())
+        rasters = pd.read_parquet(raster_path)
         print('rasters loaded')
     else: 
         rasters = None
