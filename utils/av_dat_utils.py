@@ -336,6 +336,7 @@ def load_trial_data(subject,date,load_clusters = True,load_raster = None,avg_kwa
         clusters = pd.read_csv((cluster_data_source / f'{session}.csv'),low_memory=False)
         # adding this line to create common column for merging
         clusters['neuronID'] = clusters['_av_IDs'].apply(lambda x: f'neuron_{x}')
+        print('clusters loaded')
     else: 
         clusters = None
 
@@ -343,6 +344,7 @@ def load_trial_data(subject,date,load_clusters = True,load_raster = None,avg_kwa
 
     if load_raster is not None:
         rasters = pd.read_parquet(raster_data_source / load_raster / f'{session}.csv')
+        print('rasters loaded')
     else: 
         rasters = None
         
