@@ -132,8 +132,12 @@ def plot_adj_r2_scores(coefs, model_types):
 
 # load all neurons
 
-coefs = load_results(region = 'SCm',fit_type = 'choice_engagement',time_bin = 'poststim')
+coefs = load_results(dataset=None,region = 'SCs',fit_type = 'passive',time_bin = 'stim_bin_pre_0.00_post_0.20')
 
+
+#%%
+coefs_selected = select_best_models(coefs)
+coefs_selected  = coefs_selected.fillna(0)
 #%%
 
 model_types = ['vis_engagement','vis_engagement_gain','vis']
@@ -146,7 +150,7 @@ plot_adj_r2_scores(coefs, model_types)
 
 #%%
 coefs_selected = select_best_models(coefs)
-coefs_selected.fillna(0)
+coefs_selected  = coefs_selected.fillna(0)
 # how much engagement modulates the params
 active_params = ['vis_ipsi_active', 'vis_contra_active', 'baseline_active']
 active_params = ['vis_ipsi_active', 'vis_contra_active','aud_ipsi_active', 'aud_contra_active', 'baseline_active']

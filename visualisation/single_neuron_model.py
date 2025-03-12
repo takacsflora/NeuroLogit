@@ -13,9 +13,9 @@ import matplotlib.pyplot as plt
 
 
 fit_type = 'choice_engagement'
-df,clusters,rasters = load_trial_data('AV005','2022-05-18',
-                            load_clusters=True,load_raster='choice',
-                            avg_kwargs={'pre_time':0.1,'post_time':0}).values()
+df,clusters,rasters = load_trial_data('AV008','2022-03-09',
+                            load_clusters=True,load_raster='stim',
+                            avg_kwargs={'pre_time':0.0,'post_time':0.2}).values()
 
 
 #%%
@@ -66,7 +66,7 @@ df = prepare_for_fit(df,fit_type=fit_type)
 
 #%%
 # start with example neuron
-neuron = 'neuron_122'
+neuron = 'neuron_1140'
 
 
 print(clusters[clusters.neuronID==neuron][['BerylAcronym','bombcell_class']])
@@ -75,9 +75,14 @@ print(clusters[clusters.neuronID==neuron][['BerylAcronym','bombcell_class']])
 # plot the simple passive models w\o modulations / single example
 predictors =  ['visL','visR', 'audL','audR','baseline','choice']
 weights,m = fit_nrn(df,neuron,predictors,model_name = 'audiovisual',fitter='scipy',return_model=True)
-plot_prediction(m,df.copy(),predictors,neuron,ax=None,extra_predictors = {'baseline': 1,'choice':-2})
+fig,ax = plt.subplots(1,1,figsize=(3,3))
+plot_prediction(m,df.copy(),predictors,neuron,ax=ax,extra_predictors = {'baseline': 1,'choice':-2})
+plt.ylim([-1,150])
+plt.xlim([-.41,.41])
+ax.set_ylabel('Firing rate (spks/s)')
+ax.set_title('')
+plt.legend([])
 
-    
 
 
 # %%
@@ -95,22 +100,24 @@ unique_plots = np.sort(np.unique(df[unique_columns],axis=0))
 
 n_plots = unique_plots.shape[0]
 
-fig,ax = plt.subplots(1,n_plots,figsize = (5*n_plots,5),sharex=True,sharey=True)
+fig,ax = plt.subplots(n_plots,1,figsize = (3,3*n_plots),sharex=True,sharey=True)
 
 for i,unique_cond in enumerate(unique_plots):
     added_pred_dict = {k:v for k,v in zip(unique_columns,unique_cond)}
     added_pred_dict.update({'baseline':1})
 
     plot_prediction(m,df.copy(),predictors,neuron,ax=ax[i],extra_predictors = added_pred_dict)
-    ax[i].set_title(f'{unique_columns}:{unique_cond}')
-    
+    #ax[i].set_title(f'{unique_columns}:{unique_cond}')
+    ax[i].set_title('')
+    ax[i].set_ylabel('Firing rate (spks/s)')
 
     ax[i].legend().set_visible(False)
 
     if i == n_plots - 1:
         fig.legend(ax[i].get_legend_handles_labels()[0], ax[i].get_legend_handles_labels()[1], loc='upper right')
     
-    
+plt.xlim([-.41,.41])    
+plt.ylim([-1,140])
 
 # %%
 
@@ -121,9 +128,9 @@ on_x = 'visDiff'
 on_y = 'choice'
 on_hue  = 'audDiff'
 
-on_x = 'choice'
-on_y = 'audDiff'
-on_hue  = 'visDiff'
+# on_x = 'choice'
+# on_y = 'audDiff'
+# on_hue  = 'visDiff'
 
 # Average the responses across trials for each combination of conditions
 average_responses = rasters[rasters.Feature == feature_to_plot].groupby(
@@ -131,7 +138,7 @@ average_responses = rasters[rasters.Feature == feature_to_plot].groupby(
 )['Response'].mean().reset_index()
 
 # Use the averaged responses for plotting
-g = sns.FacetGrid(average_responses, 
+g = sns.FacetGrid(average_responses[average_responses.choice!=-1], 
                   row=on_y, col=on_x, hue=on_hue, margin_titles=True, palette='coolwarm',
                   despine=False, height=2, aspect=1)
 

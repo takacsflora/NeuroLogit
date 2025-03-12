@@ -179,18 +179,15 @@ def get_benchmark_opto_dataset(region = 'SC',subject=1):
     return filt_split_trials(trials_of_subject)
 
 def get_source_folder(dat_type='trial_data'):
-    print(Path.home())
+
     if 'zcbtfta' in str(Path.home()):
         home_rep = '/lustre/home/zcbtfta'
         source_folder = f'{home_rep}/AV_Neural_data/{dat_type}'
-        print(source_folder)
+
 
     else:
         home_rep = 'D:'
         source_folder = f'{home_rep}\\AV_Neural_Data\\{dat_type}'
-
-    print(home_rep)
-    print(Path(source_folder).is_dir())
 
 
     return Path(source_folder)
@@ -326,7 +323,6 @@ def load_trial_data(subject,date,load_clusters = True,load_raster = None,avg_kwa
 
     session = f'{subject}_{date}'
 
-    print((trial_data_source / f'{session}.csv').is_file())
 
     df = pd.read_csv((trial_data_source / f'{session}.csv'),low_memory=False)
 
@@ -336,7 +332,6 @@ def load_trial_data(subject,date,load_clusters = True,load_raster = None,avg_kwa
         clusters = pd.read_csv((cluster_data_source / f'{session}.csv'),low_memory=False)
         # adding this line to create common column for merging
         clusters['neuronID'] = clusters['_av_IDs'].apply(lambda x: f'neuron_{x}')
-        print('clusters loaded')
     else: 
         clusters = None
 
@@ -344,16 +339,13 @@ def load_trial_data(subject,date,load_clusters = True,load_raster = None,avg_kwa
 
     if load_raster is not None:
         raster_path = raster_data_source / load_raster / f'{session}.csv'
-        print(raster_path.is_file())
         rasters = pd.read_parquet(raster_path)
-        print('rasters loaded')
     else: 
         rasters = None
         
     if avg_kwargs is not None: 
         df = add_average_to_ev(df,rasters,**avg_kwargs)
 
-    print('done loading')
     df = preproc_events_data(df)
 
     # ensure that the raster data has he same trial indices left as the event data

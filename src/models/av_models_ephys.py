@@ -52,7 +52,7 @@ class vis(LinearRegression):
             
             
         param_bounds = {
-                "gamma": (0.001, 10),
+                "gamma": (0.001, 5),
             }
 
 

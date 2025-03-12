@@ -18,8 +18,8 @@ def train_linears(rank=1):
     fit_type = 'passive' # could make this in loop
     dataset = 'all'  # could make this in loop?
     time_window = 'stim_bin' # could make this in loop
-    bin_size = 0.1 
-    pre_times = np.round(np.arange(-0.2,0.5,bin_size),2)
+    bin_size = 0.2
+    pre_times = np.round(np.arange(-.2,0.4,bin_size),2)
 
     print(pre_times)
 
@@ -32,7 +32,7 @@ def train_linears(rank=1):
         post_time = pre_time+bin_size        
 
         if 'bin' in time_window:
-            timings = f'{time_window}_pre_{pre_time}_post_{post_time}'
+            timings = f'{time_window}_pre_{pre_time:.2f}_post_{post_time:.2f}'	
         else:
             timings = f'{time_window}'    
 
@@ -42,12 +42,14 @@ def train_linears(rank=1):
         sessionID = f'{args.subject}_{args.date}'
         result_coef_path  = savepath / f'{sessionID}.csv'
 
-        if (i==(rank-1)) and not result_coef_path.is_file():
+        #if (i==(rank-1)) and not result_coef_path.is_file():
+        if not result_coef_path.is_file():
             time_kwargs = get_time_params(time_window,pre_time=abs(pre_time),post_time=post_time)  
             print(f'fitting {sessionID} ...')      
             coefs = fit_session(fit_type = fit_type,**args,**time_kwargs)
-            print(f'saving results to {result_coef_path}')
-            coefs.to_csv(result_coef_path)
+            if coefs is not None: 
+                print(f'saving results to {result_coef_path}')
+                coefs.to_csv(result_coef_path)
 
 if __name__ == "__main__":  
    train_linears(rank=3) 

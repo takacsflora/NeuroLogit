@@ -1,4 +1,6 @@
 # utility functions for neural data visualisation
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -37,8 +39,22 @@ def add_active_to_base(df):
 
         return df
 
-def load_results(region = 'SCm',fit_type = 'engagement',time_bin = 'poststim',revert_coefs = True):
-        df = pd.read_csv(f'D:/AVTrialData/{region}_{time_bin}/fit_results/{fit_type}.csv')
+
+
+
+
+
+def load_results(dataset=None,region = 'SCm',fit_type = 'engagement',time_bin = 'poststim',revert_coefs = True):
+        
+        
+        if dataset is not None: 
+
+            path = Path (f'C:/Users/Flora/Documents/Github/NeuroLogit/src/batch/cluster_run/linear_fit_results/{dataset}_{fit_type}_{time_bin}')
+
+            df = pd.concat([pd.read_csv(f) for f in path.glob('*.csv')])
+
+        else:
+            df = pd.read_csv(f'D:/AVTrialData/{region}_{time_bin}/fit_results/{fit_type}.csv')
         # filter for neruons that are good and are from the ROI
 
         df =df[(df.BerylAcronym == region) & df.is_good]
@@ -54,24 +70,27 @@ def load_results(region = 'SCm',fit_type = 'engagement',time_bin = 'poststim',re
 
         coefs = add_active_to_base(coefs)
 
-        coefs['choice_contra']=(coefs.hemi*coefs.choice)
+        if 'choice' in coefs.columns:
+            coefs['choice_contra'] = coefs['hemi'] * coefs['choice']
 
         return coefs
 
 
-def select_best_models(coefs):
+def select_best_models(coefs,thr=0.05):
     # select the best models
     coefs_kept = coefs.loc[coefs.groupby(['session', 'neuronID'])['adj_r2'].idxmax()]
     # also keep only neurons where the adj_r2 is above 0.1
-    coefs_kept = coefs_kept[coefs_kept['adj_r2'] > 0.05]
+    coefs_kept = coefs_kept[coefs_kept['adj_r2'] > thr]
 
 
     return coefs_kept
 
 def get_region_params(region,random_state = 1,plot_dist = True,set = 'active'):
 
-    coefs = load_results(region = region,fit_type = 'choice_engagement',time_bin = 'poststim')
+    #coefs = load_results(dataset=None,region = region,fit_type = 'choice_engagement',time_bin = 'prestim')
 
+
+    coefs = load_results(dataset='all',region = region,fit_type = 'passive',time_bin = 'stim_bin_pre_0.00_post_0.20')
     # keep neurons
 
     coefs_kept = select_best_models(coefs)
