@@ -155,12 +155,9 @@ class av_multinomial(MultinomialLogit):
             self.params['biasL']
                 )
         
-        log_odds = np.hstack([zL,zR,np.zeros_like(zR)])
-
-        return log_odds
-        
 
 
+        return zL,zR       
 
 class av_opto(av_split):
     def __init__(self):

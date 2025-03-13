@@ -158,12 +158,26 @@ class MultinomialLogit(Logit):
     def __init__(self, param_names, param_init=None, param_bounds=None):
         super().__init__(param_names, param_init,param_bounds)
 
-    @staticmethod
-    def softmax(x):
-        return np.exp(x) / np.exp(x).sum(axis=1)[:, np.newaxis]
+    @abstractmethod
+    def predict_log_proba(self, X):
+        """
+        this fucntion now needs to return two numbers 
+        zL (logIdds of left vs Nogo) and zR (logIdds of right vs Nogo)
+        """
+        pass
+
     
     def predict_proba(self, X):
-        return self.softmax(self.predict_log_proba(X))
+        zL,zR = self.predict_log_proba(X)
+        expzL = np.exp(zL)
+        expzR = np.exp(zR)
+
+        denom = 1 + expzL + expzR
+        pNoGo = 1 / denom
+        pL = expzL / denom
+        pR = expzR / denom
+
+        return np.hstack([pR, pL, pNoGo])
     
     def predict(self, X):
         return np.argmax(self.predict_proba(X), axis=1)
