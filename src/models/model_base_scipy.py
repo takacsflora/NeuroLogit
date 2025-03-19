@@ -177,7 +177,7 @@ class MultinomialLogit(Logit):
         pL = expzL / denom
         pR = expzR / denom
 
-        return np.hstack([pR, pL, pNoGo])
+        return np.hstack([pNoGo, pL, pR])
     
     def predict(self, X):
         return np.argmax(self.predict_proba(X), axis=1)

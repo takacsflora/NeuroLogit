@@ -109,11 +109,42 @@ class av_split(Logit,av_pseudoPlotter):
         )
         return log_odds
 
+class av_multi_sided(MultinomialLogit): 
+    def __init__(self):
+        extra_param_names = ['audR', 'audL', 'visR', 'visL', 'gamma', 'biasL','biasR']
+        extra_param_init = {
+            'bias': 0
+        }
+
+        super().__init__(extra_param_names,extra_param_init)
+
+    def predict_log_proba(self, X):
+        self.check_params()  # Ensure all params are initialized
+
+        # Extract inputs
+        vL = X[["visL"]].values ** self.params['gamma']
+        vR = X[["visR"]].values ** self.params['gamma']
+        aL = X[["audL"]].values
+        aR = X[["audR"]].values
+
+        zR = (
+            self.params['visR'] * vR +
+            self.params['audR'] * aR +
+            self.params['biasR']
+             )
+        
+        zL = (
+            self.params['visL'] * vL +
+            self.params['audL'] * aL +
+            self.params['biasL']
+                )
+
+        return zL,zR 
 
 class av_multinomial(MultinomialLogit): 
     def __init__(self,extra_param_names = None,extra_param_init = None, extra_param_bounds = None):
         # Define the parameter names and initial values
-        param_names = ['audR', 'audL', 'visR', 'visL', 'gamma', 'biasL','biasR']
+        param_names = ['audR', 'audL', 'visR', 'visL','audR_onL','audL_onR','visL_onR','visR_onL', 'gamma', 'biasL','biasR']
         param_init = {
             'biasL': 0,
             'biasR': 0
@@ -146,18 +177,60 @@ class av_multinomial(MultinomialLogit):
         zR = (
             self.params['visR'] * vR +
             self.params['audR'] * aR +
+            self.params['visL_onR'] * vL +
+            self.params['audL_onR'] * aL +
             self.params['biasR']
              )
         
         zL = (
             self.params['visL'] * vL +
             self.params['audL'] * aL +
+            self.params['visR_onL'] * vR +
+            self.params['audR_onL'] * aR +
             self.params['biasL']
                 )
         
 
 
         return zL,zR       
+
+class av_multi_symmetric(MultinomialLogit):
+    def __init__(self):
+        extra_param_names = ['audR', 'audL', 'visR', 'visL', 'gamma', 'biasL','biasR']
+        extra_param_init = {
+            'bias': 0
+        }
+
+        super().__init__(extra_param_names,extra_param_init)
+
+    def predict_log_proba(self, X):
+        self.check_params()  # Ensure all params are initialized
+
+        # Extract inputs
+        vL = X[["visL"]].values ** self.params['gamma']
+        vR = X[["visR"]].values ** self.params['gamma']
+        aL = X[["audL"]].values
+        aR = X[["audR"]].values
+
+        zR = (
+            self.params['visR'] * vR +
+            self.params['audR'] * aR +
+            -self.params['visL'] * vL +
+            -self.params['audL'] * aL +
+            self.params['biasR']
+             )
+        
+        zL = (
+            self.params['visL'] * vL +
+            self.params['audL'] * aL +
+            -self.params['visR'] * vR +
+            -self.params['audR'] * aR +
+            self.params['biasL']
+                )
+
+        return zL,zR 
+
+
 
 class av_opto(av_split):
     def __init__(self):
