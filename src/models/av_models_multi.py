@@ -244,6 +244,8 @@ class av_multi_asymetric(av_multi):
 class avm_opto(av_multi):
     def __init__(self,
                  extra_param_names = [
+                        'audR_onL','audL_onR',
+                        'audR_onL_opto','audL_onR_opto',
                         'visR_opto','visL_opto','audR_opto','audL_opto',
                         'biasR_opto','biasL_opto'
                         ],
@@ -272,32 +274,28 @@ class avm_opto(av_multi):
         zR_ctrl = (
             self.params['visR'] * vR +
             self.params['audR'] * aR +
-            -self.params['visL'] * vL +
-            -self.params['audL'] * aL +
+            self.params['audL_onR'] * aL +
             self.params['biasR']
              )
         
         zR_opto = (
             self.params['visR_opto'] * vR * o +
             self.params['audR_opto'] * aR  * o +
-            -self.params['visL_opto'] * vL * o +
-            -self.params['audL_opto'] * aL * o +
+            -self.params['audL_onR_opto'] * aL * o +
             self.params['biasR_opto'] * o 
              )
         
         zL_ctrl = (
             self.params['visL'] * vL +
             self.params['audL'] * aL +
-            -self.params['visR'] * vR +
-            -self.params['audR'] * aR +
+            -self.params['audR_onL'] * aR +
             self.params['biasL']
                 )
         
         zL_opto = (
             self.params['visL_opto'] * vL * o  +
             self.params['audL_opto'] * aL * o +
-            -self.params['visR_opto'] * vR * o +
-            -self.params['audR_opto'] * aR * o +
+            -self.params['audR_onL_opto'] * aR * o +
             self.params['biasL_opto'] * o 
                 )
 
