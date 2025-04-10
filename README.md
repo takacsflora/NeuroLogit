@@ -4,7 +4,3 @@ Contains:
 - behaviour-only model to model 2-AFC tasks
 - models to add neurons as predictors
 - models to quantify inactivation results
-
-
-
-S
