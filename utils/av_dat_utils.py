@@ -105,7 +105,12 @@ def preproc_av_opto_data(set_name = r'opto\Rinberg'):
         trials['trialtype_id'] = trials.copy().groupby(['visDiff','audDiff']).ngroup()
 
         #IDs about sessions,hemispheres, mice etc.
-        trials['subject']=ev.subjectID_    
+        if 'subjectID_' in ev.columns:
+            trials['subject']=ev.subjectID_    
+
+        else:
+            trials['subject']=ev.subjectID
+        
         trials['sessionID'] = ev.sessionID
 
         # add the bias predictors if we want to use them.
@@ -126,8 +131,13 @@ def preproc_av_opto_data(set_name = r'opto\Rinberg'):
         # for now we don't use the 
         trials.to_csv((formatted_path / cpath.name))
 
-def filt_split_trials(trials, test_size = 0.33, balance_sensory = True,balance_control=False):
+def filt_split_trials(trials, test_size = 0.33, incl_early_moves=False,keepNoGo = False,balance_sensory = True,balance_control=False):
     # 
+    if 'bias opto' not in trials.columns:
+        trials['bias_opto'] = trials.opto
+        trials['bias'] = 1
+        trials['hemisphere'] = 1 
+
     stim_predictors = ["visR", "visL", "audR", "audL", "bias"]
     
     opto_predictors = [
@@ -141,10 +151,22 @@ def filt_split_trials(trials, test_size = 0.33, balance_sensory = True,balance_c
 
     all_predictors = stim_predictors + opto_predictors
 
+    if incl_early_moves:
+        trials.loc[trials.choice == 2, 'choice'] = 0
+        trials.loc[trials.choice == 3, 'choice'] = 1
     # filter the trial matrix
-    trials = trials[
-        (trials.choice == 0) | (trials.choice == 1)
-    ]  # keep only the post-stim correct trials
+    if keepNoGo:
+         trials = trials[
+            (trials.choice == 0) | (trials.choice == 1) | (trials.choice == -1)
+         ]
+
+         trials.choice = trials.choice + 1
+
+    else: 
+        trials = trials[
+            (trials.choice == 0) | (trials.choice == 1)
+        ] 
+        
     if balance_control: 
         n_trials = trials.bias_opto.value_counts().min()
         trials_ctrl = trials[trials.bias_opto == 0].sample(n_trials*2, random_state=1)

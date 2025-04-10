@@ -5,7 +5,6 @@ Contains:
 - models to add neurons as predictors
 - models to quantify inactivation results
 
-At the moment this module has been tested on:
-- Audiovisual localisation task (Coen et al. 2023,Takacs et al.,TBD)
 
 
+S

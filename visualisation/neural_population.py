@@ -6,9 +6,9 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-region = 'MOs'
-fit_type = 'choice_engagement'
-time_period = 'choice'
+region = 'SCm'
+fit_type = 'passive'
+time_period = 'stim'
 df = pd.read_csv(f'D:/AVTrialData/{region}_{time_period}/fit_results/{fit_type}.csv')
 # filter for neruons that are good and are from the ROI
 

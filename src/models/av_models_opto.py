@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from .model_base_scipy import Logit,LinearRegression,MultinomialLogit
+from .model_base_scipy import Logit,MultinomialLogit
 
 class av_pseudoPlotter():
     def __init__(self):
@@ -108,129 +108,6 @@ class av_split(Logit,av_pseudoPlotter):
             self.params['bias']
         )
         return log_odds
-
-class av_multi_sided(MultinomialLogit): 
-    def __init__(self):
-        extra_param_names = ['audR', 'audL', 'visR', 'visL', 'gamma', 'biasL','biasR']
-        extra_param_init = {
-            'bias': 0
-        }
-
-        super().__init__(extra_param_names,extra_param_init)
-
-    def predict_log_proba(self, X):
-        self.check_params()  # Ensure all params are initialized
-
-        # Extract inputs
-        vL = X[["visL"]].values ** self.params['gamma']
-        vR = X[["visR"]].values ** self.params['gamma']
-        aL = X[["audL"]].values
-        aR = X[["audR"]].values
-
-        zR = (
-            self.params['visR'] * vR +
-            self.params['audR'] * aR +
-            self.params['biasR']
-             )
-        
-        zL = (
-            self.params['visL'] * vL +
-            self.params['audL'] * aL +
-            self.params['biasL']
-                )
-
-        return zL,zR 
-
-class av_multinomial(MultinomialLogit): 
-    def __init__(self,extra_param_names = None,extra_param_init = None, extra_param_bounds = None):
-        # Define the parameter names and initial values
-        param_names = ['audR', 'audL', 'visR', 'visL','audR_onL','audL_onR','visL_onR','visR_onL', 'gamma', 'biasL','biasR']
-        param_init = {
-            'biasL': 0,
-            'biasR': 0
-        }
-
-        param_bounds = {
-            "gamma": (0.2, 2),
-        }
-
-        # update with the added extras
-        if extra_param_names is not None:
-            param_names += extra_param_names        
-        if extra_param_init is not None:
-            param_init.update(extra_param_init) 
-        if extra_param_bounds is not None:
-            param_bounds.update(extra_param_bounds)
-        
-        # Call parent class's init to handle the parameter setup
-        super().__init__(param_names, param_init,param_bounds)
-
-    def predict_log_proba(self, X):
-        self.check_params()
-
-            # Extract inputs
-        vL = X[["visL"]].values ** self.params['gamma']
-        vR = X[["visR"]].values ** self.params['gamma']
-        aL = X[["audL"]].values
-        aR = X[["audR"]].values
-
-        zR = (
-            self.params['visR'] * vR +
-            self.params['audR'] * aR +
-            self.params['visL_onR'] * vL +
-            self.params['audL_onR'] * aL +
-            self.params['biasR']
-             )
-        
-        zL = (
-            self.params['visL'] * vL +
-            self.params['audL'] * aL +
-            self.params['visR_onL'] * vR +
-            self.params['audR_onL'] * aR +
-            self.params['biasL']
-                )
-        
-
-
-        return zL,zR       
-
-class av_multi_symmetric(MultinomialLogit):
-    def __init__(self):
-        extra_param_names = ['audR', 'audL', 'visR', 'visL', 'gamma', 'biasL','biasR']
-        extra_param_init = {
-            'bias': 0
-        }
-
-        super().__init__(extra_param_names,extra_param_init)
-
-    def predict_log_proba(self, X):
-        self.check_params()  # Ensure all params are initialized
-
-        # Extract inputs
-        vL = X[["visL"]].values ** self.params['gamma']
-        vR = X[["visR"]].values ** self.params['gamma']
-        aL = X[["audL"]].values
-        aR = X[["audR"]].values
-
-        zR = (
-            self.params['visR'] * vR +
-            self.params['audR'] * aR +
-            -self.params['visL'] * vL +
-            -self.params['audL'] * aL +
-            self.params['biasR']
-             )
-        
-        zL = (
-            self.params['visL'] * vL +
-            self.params['audL'] * aL +
-            -self.params['visR'] * vR +
-            -self.params['audR'] * aR +
-            self.params['biasL']
-                )
-
-        return zL,zR 
-
-
 
 class av_opto(av_split):
     def __init__(self):

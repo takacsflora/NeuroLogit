@@ -3,9 +3,9 @@ import pandas as pd
 from utils.neural_results_utils import load_results,select_best_models
 
 
-regions = ['SCs','SCm','MOs','CP','MRN','RSPd']
-coefs = pd.concat([load_results(dataset='all',region = r,fit_type = 'passive',time_bin = 'stim_bin_pre_0.40_post_0.60') for r in regions])
-#coefs = pd.concat([load_results(dataset=None,region = r,fit_type = 'passive',time_bin = 'poststim') for r in regions])
+regions = ['SCs','SCm']
+#coefs = pd.concat([load_results(dataset='all',region = r,fit_type = 'passive',time_bin = 'stim_bin_pre_0.40_post_0.60') for r in regions])
+coefs = pd.concat([load_results(dataset=None,region = r,fit_type = 'choice',time_bin = 'poststim') for r in regions])
 
 #%%
 
@@ -223,3 +223,5 @@ plt.suptitle('Pairplot of Selected Parameters')
 plt.show()
 
 # %%
+
+
