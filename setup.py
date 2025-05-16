@@ -9,6 +9,7 @@ setup(
         "plotly",
         "seaborn",
         "pyarrow",
+        'matplotlib-venn'
     ],
     author='Flora Takacs',
     description='Logistic Classification for ephys data and optogentic inactivation',

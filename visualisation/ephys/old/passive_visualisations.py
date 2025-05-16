@@ -9,7 +9,7 @@ regions = ['SCs','SCm']
 #coefs = pd.concat([load_results(dataset='all',region = r,fit_type = 'passive',time_bin = 'stim_bin_pre_0.40_post_0.60') for r in regions])
 coefs = pd.concat([load_results(dataset=None,region = r,fit_type = 'passive',time_bin = 'poststim') for r in regions])
 
-selected_coefs = select_best_models(coefs,thr=-0.01)
+selected_coefs = select_best_models(coefs,thr=-10)
 selected_coefs = selected_coefs.fillna(0)
 
 

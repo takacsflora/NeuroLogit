@@ -25,7 +25,57 @@ class PowerTransformer(BaseEstimator, TransformerMixin):
     def get_feature_names_out(self, input_features=None):
         return self.feature_names_in_ if input_features is None else input_features
 
-def fit_model(X,y,power=1,gridCV_vis=False,gridCV_neur=False, neuron_selector='lasso'):
+
+def fit_model(X,y,power=1,gridCV_vis=False):
+    """this is a function to fit a logistic regression model to neural data
+
+    Args:
+        X (pd.df): predictors
+        y (pd.series): neural response
+        power (int, optional): visual power. Defaults to 1.
+        gridCV_vis (bool, optional): whether to grid-search thevisual power. Defaults to False.
+
+    Returns:
+        _type_: _description_
+    """
+    is_vis_predictor = np.isin(X.columns,['visL','visR','visR_opto', 'visL_opto'])
+    
+    combined_transformer = ColumnTransformer(
+        [
+            ('vis',PowerTransformer(power=power),is_vis_predictor)
+         ],
+        remainder='passthrough',
+        force_int_remainder_cols = False,
+        verbose_feature_names_out= False
+    )
+
+    
+
+    pipeline = Pipeline([
+       ('features',combined_transformer),
+       ('regression',LogisticRegression(fit_intercept=False))
+    ])
+
+    if (not gridCV_vis):
+
+        pipeline.fit(X,y)    
+        return pipeline
+    
+    else:
+        
+        param_grid = {}
+        if gridCV_vis:
+            param_grid['features__vis__power'] = np.round(np.arange(0.01,5,0.1),2)
+         
+        grid_search = GridSearchCV(
+            pipeline, param_grid, cv=5,
+            scoring='neg_log_loss',
+            n_jobs=-1)
+        grid_search.fit(X, y)
+
+        return grid_search.best_estimator_
+
+def fit_model_neuralpop(X,y,power=1,gridCV_vis=False,gridCV_neur=False, neuron_selector='lasso'):
 
     if neuron_selector=='lasso':
         neural_transformer = Pipeline([

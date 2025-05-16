@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 # test things with example neuron 
 
 
-fit_type = 'choice_engagement'
+fit_type = 'passive'
 df,clusters,rasters = load_trial_data('AV008','2022-03-09',
                             load_clusters=True,load_raster='stim',
                             avg_kwargs={'pre_time':0.0,'post_time':0.2}).values()

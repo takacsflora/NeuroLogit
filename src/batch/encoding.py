@@ -24,10 +24,11 @@ import matplotlib.pyplot as plt
 from src.models.av_models_opto import av_pseudoPlotter
 
 
-def plot_prediction(m,df,predictors,neuron,ax=None,extra_predictors = None):
+def plot_prediction(m,df,predictors,neuron,hemisphere=1,ax=None,extra_predictors = None):
 
     pred_name = f'{neuron}_pred'
-    df[pred_name] = m.predict(df[predictors])
+    df['hemi'] = hemisphere 
+    df[pred_name] = m.predict(df[predictors + ['hemi']])
 
     # check whether the predictors are the same/correct ones
 
@@ -42,16 +43,24 @@ def plot_prediction(m,df,predictors,neuron,ax=None,extra_predictors = None):
     if extra_predictors is not None:
         query_string = ' & '.join([f'({k} == {v})' for k,v in extra_predictors.items()])
         df = df.query(query_string)
-        pass
+        # we laso append the hemi to the extra predictors dict
+        extra_predictors.update({'hemi': hemisphere})
+    else:
+        extra_predictors = {'hemi': hemisphere}
 
     means, errors = compute_means_and_errors(df, neuron, pred_name)
 
     # Plotting the means and errors
     if ax is None:
-        fig, ax = plt.subplots(figsize=(6, 6))
+        fig, ax = plt.subplots(figsize=(3,3),dpi=300)
 
     unique_audDiffs = np.sort(df.audDiff.unique())
-    colors = sns.color_palette('coolwarm', n_colors=len(unique_audDiffs))
+
+                    # Create a custom colormap with darker grey in the middle
+    colors = [(0, 0, 1), (0.5,0.5, 0.5), (1, 0, 0)]  # Blue -> Grey -> Red
+    # positions = [0, 0.5, 1]  # Positions for the colors
+    # custom_cmap = LinearSegmentedColormap.from_list("custom_coolwarm", list(zip(positions, colors)))
+    # colors = sns.color_palette('coolwarm', n_colors=len(unique_audDiffs))
 
     for i, audDiff in enumerate(unique_audDiffs):
         means_audDiff = means[means.audDiff == audDiff]
@@ -64,12 +73,13 @@ def plot_prediction(m,df,predictors,neuron,ax=None,extra_predictors = None):
             color=colors[i],
             fmt='o',  # use 'o' to plot only dots without connecting lines
         )
+        
         ax.scatter(
             x=means_audDiff.visDiff,
             y=means_audDiff[neuron],
             color=colors[i],
-            s=50,  # size of the dot
-            zorder=3  # ensure dots are on top of error bars
+            s=36,  # size of the dot
+            zorder=3,
         )
 
 
@@ -91,38 +101,39 @@ def plot_prediction(m,df,predictors,neuron,ax=None,extra_predictors = None):
     ax.set_ylabel('Response (z-score)')
     ax.set_title('Neuron Response and Prediction')
     
-    ax.legend(title='Aud Azimuth (norm.)')
 
     return ax
 
-def fit_nrn(df,neuron,predictors,model_name = None, fitter = 'sklearn',return_model = False):
-    y = df[neuron]
+def fit_nrn(df,neuron,predictors,hemisphere = 1,model_name = None,return_model = False):
+    
 
-# check variance 
+    y = df[neuron].copy()
 
+
+    # if the neuron is just shit
     if (y.var() < 0.05) | y.isna().any():
-        print(f'neuron {neuron} has low variance or missing values')
+        #print(f'neuron {neuron} has low variance or missing values')
 
         weights = None
     else:
-        X = df[predictors] # this can potentially be avoided by using scipy. Also the entire splotting can be done once... maybe
-
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
         
-        if fitter == 'sklearn':
-            m = fit_linear_regression_neural(X_train, y_train, gridCV_vis=True) # it is just here where we need to modufiy the function
 
-            params = get_weights(m)
-            gamma = params['hyperparameters']['features__vis__power']
-            weights = params['weights']
-            weights['gamma'] = gamma
 
-         
-        elif fitter == 'scipy':
-            m = getattr(model_set,model_name)
-            m = m()
-            m.fit(X_train,y_train)
-            weights = pd.DataFrame.from_dict(m.params,orient='index').T
+        X = df[predictors].copy()
+
+        # this is not entirely correct. we can always identify the hemisphere.... but this happens I believe to neurons who are void. 
+        if np.isnan(hemisphere): 
+            X['hemi'] = 1
+        else:
+            X['hemi'] = hemisphere
+
+        
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+                 
+        m = getattr(model_set,model_name)
+        m = m()
+        m.fit(X_train,y_train)
+        weights = pd.DataFrame.from_dict(m.params,orient='index').T
 
         weights['neuronID'] = neuron
         weights['model_type'] = model_name
@@ -135,17 +146,17 @@ def fit_nrn(df,neuron,predictors,model_name = None, fitter = 'sklearn',return_mo
         weights['mse'] = mse
 
         n_trials = X_test.shape[0]
-        n_predictors = len(predictors)
+        n_predictors = len(m.get_params())
         adj_r2 = calculate_adjusted_r2(r2,n_trials,n_predictors)
         weights['adj_r2'] = adj_r2
 
-        
-
+    
     if return_model:
         return weights,m
     else:
         return weights
 
+## to clean this up later ...
 def get_model_set(fit_type=None):
     """this basically is a parameter calling function that calls the collections of models we fit for partiucular analysis. 
 
@@ -156,65 +167,21 @@ def get_model_set(fit_type=None):
     """
     
     if fit_type == 'passive':
-        models  = {
-            'audiovisual': ['visL','visR', 'audL','audR','baseline'],
-            'aud': ['audL','audR','baseline'],
-            'vis' : ['visL','visR','baseline'], 
-            'baseline': ['baseline'],
+        models  = ['baseline','vis','aud','audiovisual']
+        predictors = ['visL','visR', 'audL','audR','baseline']
 
-        }
-    elif fit_type == 'engagement':
-        models = {
-            'audiovisual_engagement': ['visL','visR', 'audL','audR','baseline','is_active'],
-            'aud_engagement': ['audL','audR','baseline','is_active'],
-            'vis_engagement' : ['visL','visR','baseline','is_active'], 
-            'audiovisual_engagement_gain': ['visL','visR', 'audL','audR','baseline','is_active'],
-            'aud_engagement_gain': ['audL','audR','baseline','is_active'],
-            'vis_engagement_gain' : ['visL','visR','baseline','is_active'], 
-            'baseline_engagement': ['baseline','is_active'],
-            'audiovisual': ['visL','visR', 'audL','audR','baseline'],
-            'aud': ['audL','audR','baseline'],
-            'vis' : ['visL','visR','baseline'], 
-            'baseline': ['baseline'],
-        }
+    elif fit_type == 'task':
+        models =[
+            'baseline','vis','aud','audiovisual',
+            'baseline_task','vis_task','aud_task','audiovisual_task',
+            'vis_task_gain','aud_task_gain','audiovisual_task_gain',   
+            'baseline_choice','vis_choice','aud_choice','audiovisual_choice'
 
-    if (fit_type == 'choice'):
-        models  = {
-            'audiovisual': ['visL','visR', 'audL','audR','baseline'],
-            'aud': ['audL','audR','baseline'],
-            'vis' : ['visL','visR','baseline'], 
-            'baseline': ['baseline'],
-            'audiovisual_choice': ['visL','visR', 'audL','audR','baseline','choice'],
-            'aud_choice': ['audL','audR','baseline','choice'],
-            'vis_choice' : ['visL','visR','baseline','choice'], 
-            'baseline_choice': ['baseline','choice'],
-        }     
+        ]
 
-    # this is potentially the final model set except if we introduce a join fitting over time ...
-    if fit_type == 'choice_engagement': 
-        models  = {
-            'audiovisual': ['visL','visR', 'audL','audR','baseline'],
-            'aud': ['audL','audR','baseline'],
-            'vis' : ['visL','visR','baseline'], 
-            'baseline': ['baseline'],
-            'audiovisual_choice_engaged': ['visL','visR', 'audL','audR','baseline','is_active','choice'],
-            'aud_choice_engaged': ['audL','audR','baseline','is_active','choice'],
-            'vis_choice_engaged' : ['visL','visR','baseline','is_active','choice'], 
-            'baseline_choice_engaged': ['baseline','is_active','choice'],
-            'audiovisual_engagement': ['visL','visR', 'audL','audR','baseline','is_active'],
-            'aud_engagement': ['audL','audR','baseline','is_active'],
-            'vis_engagement' : ['visL','visR','baseline','is_active'], 
-            'audiovisual_engagement_gain': ['visL','visR', 'audL','audR','baseline','is_active'],
-            'aud_engagement_gain': ['audL','audR','baseline','is_active'],
-            'vis_engagement_gain' : ['visL','visR','baseline','is_active'], 
-            'baseline_engagement': ['baseline','is_active'],
-        }
-    
-    else:
-        print('fit type not recognised')
+        predictors = ['visL','visR', 'audL','audR','baseline','choice','is_active']
 
-
-    return models 
+    return models,predictors
 
 def get_time_params(time_window,pre_time = None,post_time = None):
 
@@ -250,18 +217,29 @@ def get_time_params(time_window,pre_time = None,post_time = None):
 
     return kwargs
 
-def fit_all_neurons(df,fit_type='passive'):
+def fit_all_neurons(df,clusters,fit_type='passive'):
     df = prepare_for_fit(df,fit_type=fit_type)
 
     nrns_extracted = np.array([k for k in df.columns if 'neuron' in k]) 
 
+    nrn_hemisphere = [clusters[clusters.neuronID==neuron].hemi.values[0] for neuron in nrns_extracted]
 
-    models = get_model_set(fit_type=fit_type)
-    results = Parallel(n_jobs=-1)(
-        delayed(fit_nrn)(df,neuron,models[model],model_name = model,fitter='scipy',return_model=False)
-        for neuron in nrns_extracted
+    models,predictors = get_model_set(fit_type=fit_type)
+   
+
+    # loop for debugging
+    # results = []
+    # for neuron,hemi in zip(nrns_extracted,nrn_hemisphere):
+    #     for model in models:
+    #         results.append(fit_nrn(df,neuron,predictors,model_name = model,return_model=False,hemisphere=hemi))
+
+    results = Parallel(n_jobs=8)(
+        delayed(fit_nrn)(df,neuron,predictors,model_name = model,return_model=False,hemisphere=hemi)
+        for neuron,hemi in zip(nrns_extracted,nrn_hemisphere)
         for model in models
     )
+
+
     coefs  = pd.concat(results)
 
     return coefs
@@ -271,7 +249,7 @@ def fit_session(fit_type='passive',**args):
         df,clusters,_  = load_trial_data(**args).values()
         kept_clusInfo  = ['neuronID', 'hemi', 'bombcell_class','is_good','BerylAcronym','ml', 'ap', 'dv','probeID','firing_rate','amp_median']
         print('loaded, fitting session now ...')
-        coefs  = fit_all_neurons(df,fit_type = fit_type)
+        coefs  = fit_all_neurons(df,clusters,fit_type = fit_type)
         coefs = coefs.merge(clusters[kept_clusInfo], on='neuronID', how='left')
 
         # add subject and date to coefs dataframe
@@ -283,3 +261,5 @@ def fit_session(fit_type='passive',**args):
         print(f'Error in session {args}')
         return None
     
+
+
