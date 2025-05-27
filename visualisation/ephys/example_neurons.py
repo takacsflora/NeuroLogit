@@ -7,11 +7,11 @@ from src.ephys.dat_utils import load_trial_data
 
 timing = {'time_window':'stim','pre_time':0.0,'post_time':0.15}
 
-fit_type = 'active'
+fit_type = 'passive'
 
 # load the models 
-subject = 'AV034'
-date = '2022-12-07'
+subject = 'AV030'
+date = '2022-12-06'
 
 
 coefs = fit_dataset(fit_type = fit_type,
@@ -41,12 +41,13 @@ df,clusters,_ = load_trial_data(**sess_params,**time_params).values()
 
 #%%
 
-nrn = 'neuron_166'
+nrn = 'neuron_1310'
 
 nrn_fitID = f"{sess_params['subject']}_{sess_params['date']}_{nrn}"
 # find neuron in the best_mode_df
 nrn_model = models[models.fitID==nrn_fitID].copy()
-print(nrn_model.model.values[0])
+
+print(nrn_model.BerylAcronym.values[0],nrn_model.model.values[0],nrn_model.bombcell_class.values[0])
 #nrn_model = coefs[(coefs.fitID==nrn_fitID) & (coefs.model=='av') & (coefs.gamma==2)].copy()
 
 plot_prediction(filt_trials(df,fit_type),nrn_model)

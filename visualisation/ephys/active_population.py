@@ -28,13 +28,17 @@ models = get_winning_model(coefs,thr_scorer='adj_r2',thr=0)
 
 
 
-
 #%%
 
 
+# goodClus = models[(models.is_good) &
+#                    ((models.BerylAcronym=='SCm')|(models.BerylAcronym=='SCs')) & 
+#                    (models.subject.isin(['AV025','AV030','AV034'])) 
+#                    ].copy()
+
 goodClus = models[(models.is_good) &
-                   ((models.BerylAcronym=='SCm')|(models.BerylAcronym=='SCs')) & 
-                   (models.subject.isin(['AV025','AV030','AV034'])) 
+                   ((models.BerylAcronym=='MOs')) & 
+                   (models.subject.isin(['AV023'])) 
                    ].copy()
 
 
@@ -65,13 +69,22 @@ plt.show()
 #%%
 model_counts['subject'] = model_counts['sessionID'].str.split('_').str[0]
 plt.figure(figsize=(12, 8))
-sns.lineplot(data=model_counts, x='model', y='percentage', hue='subject', marker='o')
-plt.title('Model Percentages Per Session')
-plt.ylabel('Percentage')
-plt.xlabel('Model')
-plt.xticks(rotation=45)
-plt.legend(title='Session ID', bbox_to_anchor=(1.05, 1), loc='upper left')
-plt.axhline(y=5, color='k', linestyle='--', linewidth=0.5)
+
+from src.ephys.encoding_avg import get_predictors
+
+fig,ax = plt.subplots(1, 1, figsize=(12, 8))
+
+sns.lineplot(data=model_counts, x='model', y='percentage', hue='subject', marker='o',ax=ax)
+ax.set_title('Percentage of neurons per sesssion, on avg')
+ax.set_ylabel('Percentage')
+ax.set_xlabel('Model')
+ax.legend(title='Session ID', bbox_to_anchor=(1.05, 1), loc='upper left')
+ax.axhline(y=5, color='k', linestyle='--', linewidth=0.5)
+
+
+xticklabels = [t.get_text() for t in ax.get_xticklabels()]
+xticklabels = [get_predictors(model) for model in xticklabels]
+ax.set_xticklabels(xticklabels, rotation=45, ha='right')
 
 plt.tight_layout()
 plt.show()

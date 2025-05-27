@@ -343,7 +343,7 @@ def fit_session(df,clusters,fit_type = 'passive'):
     model_fits = pd.concat([train_and_evaluate_model(df,clusters,hemi=hemi,fit_type=fit_type) for hemi in unique_hemis])
 
 
-    clusters_added_columns = ['neuronID','BerylAcronym','bombcell_class','is_good']
+    clusters_added_columns = ['neuronID','BerylAcronym','bombcell_class','is_good','ml','ap','dv']
     model_fits = model_fits.merge(clusters[clusters_added_columns], on='neuronID', how='left')
     return model_fits
 

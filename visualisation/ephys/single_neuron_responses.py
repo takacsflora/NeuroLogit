@@ -1,7 +1,7 @@
 # %%
 
 import numpy as np
-from utils.av_dat_utils import load_trial_data,prepare_for_fit
+from src.ephys.dat_utils import load_trial_data
 
 import matplotlib.pyplot as plt 
 import seaborn as sns
@@ -12,7 +12,7 @@ import seaborn as sns
 fit_type = 'passive'
 
 
-ev,clusters,rasters = load_trial_data('AV008','2022-03-10',
+ev,clusters,rasters = load_trial_data('AV030','2022-12-06',
                             load_clusters=True,load_raster='stim',
                             avg_kwargs=None).values()
 
@@ -21,7 +21,7 @@ added_conditions = ['choice','visDiff','audDiff']
 rasters = rasters.merge(ev[added_conditions], left_on='Trial', right_index=True, how='left')
 
 
-rasters = rasters[(rasters['Time'] >= -.05) & (rasters['Time'] <= .2)].copy()
+rasters = rasters[(rasters['Time'] >= -.05) & (rasters['Time'] <= .4)].copy()
 
 #%%
 
@@ -31,7 +31,7 @@ rasters = rasters[(rasters['Time'] >= -.05) & (rasters['Time'] <= .2)].copy()
 # plot neuron location 
 
 # Prepare data for plotting
-feature_to_plot = 'neuron_1002'
+feature_to_plot = 'neuron_1213'
 
 
 clus_features = clusters[clusters.neuronID==feature_to_plot]
@@ -72,9 +72,9 @@ average_responses = rasters[(rasters.Feature == feature_to_plot) & (rasters.choi
 )['Response'].mean().reset_index()
 
 
-# # we multiply visDiff and audDiff by hemi to always get the contralateral response
-average_responses['visDiff'] = average_responses['visDiff']*clus_features['hemi'].values[0] *-1
-average_responses['audDiff'] = average_responses['audDiff']*clus_features['hemi'].values[0] * -1 
+# # # we multiply visDiff and audDiff by hemi to always get the contralateral response
+# average_responses['visDiff'] = average_responses['visDiff']*clus_features['hemi'].values[0] *-1
+# average_responses['audDiff'] = average_responses['audDiff']*clus_features['hemi'].values[0] * -1 
 
 # Adjust the spacing between subplots
 
@@ -150,7 +150,7 @@ for i, aud_val in enumerate(aud_vals):
 
         response_matrix = r_neur_trialtype.pivot(index='Trial', columns='Time', values='Response')
 
-        cax = ax.matshow(response_matrix, aspect='auto', cmap=aud_palettes[i], vmin=0)
+        cax = ax.matshow(response_matrix, aspect='auto', cmap=aud_palettes[i], vmin=0,vmax=100)
 
         # Remove ticks and spines
         
