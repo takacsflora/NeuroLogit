@@ -9,7 +9,7 @@ timing = {'time_window':'stim','pre_time':0.0,'post_time':0.15}
 fit_type = 'passive'
 subset = ''
 
-recompute = True
+recompute = False
 path = rf'C:\Users\Flora\Documents\Github\NeuroLogit\data\{fit_type}_{subset}_coefs.csv'
 
 
@@ -31,7 +31,8 @@ models = get_winning_model(coefs,thr_scorer='adj_r2',thr=0)
 
 
 # %%
-
+# 
+# 'AV005','AV008','AV014','FT030','FT032'
 
 goodClus = models[(models.is_good) &
                    ((models.BerylAcronym=='SCm')|(models.BerylAcronym=='SCs')) & 
@@ -91,21 +92,9 @@ plt.show()
 
 
 
-
-# %%
-# select individual neurons --- 
-coefs_full = coefs[
-    (coefs.is_good) &
-    ((coefs.BerylAcronym == 'SCs')|(coefs.BerylAcronym=='SCm')) & 
-    (coefs.model == 'av_bilateral') 
-      ].copy().reset_index(drop=True)
-
-
-# get the winnder gamma 
-
 #
 #%%
-average_dv_per_session = coefs.groupby(['subject', 'date'])['dv'].mean().reset_index()
+average_dv_per_session = goodClus.groupby(['subject', 'date'])['dv'].mean().reset_index()
 
 # Select sessions within each subject that are at least 600 dv apart
 selected_sessions = []
@@ -120,7 +109,7 @@ for subject, group in average_dv_per_session.groupby('subject'):
 selected_sessions = pd.DataFrame(selected_sessions)
 
 # Filter selected_coefs to keep only neurons from selected_sessions
-selected_coefs = coefs.merge(
+selected_coefs = goodClus.merge(
     selected_sessions[['subject', 'date']],
     on=['subject', 'date'],
     how='inner'
@@ -129,7 +118,7 @@ selected_coefs = coefs.merge(
 
 
 
-
+# %%
 # maybe let's do the anatomy plot for each mouse or group of cells? 
 from floras_helpers.anat_plots import anatomy_plotter
 
@@ -140,13 +129,18 @@ anat.plot_anat_canvas(ax=ax,coord = 3800, axis='ap')
 
 anat.plot_points(selected_coefs['ml'],selected_coefs['dv'],unilateral=True,c = 'grey',alpha=0.2,marker = '.',s=100,edgecolor=None)
 
-# param = 'aud_ipsi'
-# cc = selected_coefs[(selected_coefs['model_type'] != 'baseline') & (selected_coefs['model_type'] != 'vis')].copy()
-# #cc = selected_coefs[(selected_coefs['model_type'] != 'baseline') & (selected_coefs['model_type'] != 'aud')].copy()
+param = 'visC'
+cc = selected_coefs[selected_coefs[param].notna()].copy()
 
-# anat.plot_points(cc['ml'],cc['dv'],unilateral=True,c = cc[param],alpha=1,marker = '.',s=200,edgecolor='k',cmap='coolwarm',vmin=-20,vmax=20)
+import numpy as np
+cc['is_extrame_gamma'] = np.abs((cc['gamma']-1))
+anat.plot_points(cc['ml'],cc['dv'],unilateral=True,c = cc['gamma'],alpha=1,marker = '.',s=100,edgecolor='k',cmap='RdYlBu',vmin=0,vmax=2)
+
+
+#anat.plot_points(cc['ml'],cc['dv'],unilateral=True,c = cc[param],alpha=1,marker = '.',s=200,edgecolor='k',cmap='coolwarm',vmin=-20,vmax=20)
 
 ax.set_xlim([-2200, -200])
 ax.set_ylim([-3000, -500])
 ax.invert_xaxis()
+ax.set_title(f'{param} weight')
 # %%

@@ -16,11 +16,11 @@ date = '2022-12-06'
 
 coefs = fit_dataset(fit_type = fit_type,
     dataset_kwargs={'set_name':'all', 'subset':f'{subject}_{date}'},
-    time_kwargs=timing
+    time_kwargs=timing,
+    recompute=False
 )
 
 models = get_winning_model(coefs,thr_scorer='adj_r2',thr=0)
-
 
 
 
@@ -41,7 +41,7 @@ df,clusters,_ = load_trial_data(**sess_params,**time_params).values()
 
 #%%
 
-nrn = 'neuron_1310'
+nrn = 'neuron_1012'
 
 nrn_fitID = f"{sess_params['subject']}_{sess_params['date']}_{nrn}"
 # find neuron in the best_mode_df
@@ -50,7 +50,7 @@ nrn_model = models[models.fitID==nrn_fitID].copy()
 print(nrn_model.BerylAcronym.values[0],nrn_model.model.values[0],nrn_model.bombcell_class.values[0])
 #nrn_model = coefs[(coefs.fitID==nrn_fitID) & (coefs.model=='av') & (coefs.gamma==2)].copy()
 
-plot_prediction(filt_trials(df,fit_type),nrn_model)
+plot_prediction(filt_trials(df,fit_type),nrn_model,plot_gamma_transformed_v=False)
 
 plt.suptitle(nrn)
 

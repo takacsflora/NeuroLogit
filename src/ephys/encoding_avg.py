@@ -1,12 +1,12 @@
 #%%
-
+from pathlib import Path
 import numpy as np
 import pandas as pd 
 import matplotlib.pyplot as plt
 
 
 from src.ephys.dat_utils import load_trial_data,get_ephys_dataset
-
+from src.models.av_models_multi import av_multi_symmetric_audio
 
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
@@ -23,6 +23,8 @@ def get_predictors(fit_type='vis'):
         predictors = ['visC','visI']
     elif fit_type == 'aud':
         predictors = ['audC']
+    elif fit_type == 'aud_ipsi':
+        predictors = ['audI']
     elif fit_type == 'aud_bilateral':
         predictors = ['audC', 'audI']
     elif fit_type == 'av':
@@ -32,7 +34,11 @@ def get_predictors(fit_type='vis'):
     elif fit_type == 'av_bilateral':
         predictors = ['visC', 'audC', 'visI', 'audI']
     elif fit_type == 'av_multiplicative':
-        pass
+        predictors = ['visC', 'audC','visC_congruent']
+    elif fit_type == 'av_bilateral_multiplicative':
+        predictors = ['visC', 'audC', 'visI', 'audI','visC_congruent','visI_congruent']
+    elif fit_type == 'a_vPres':
+        predictors = ['audI', 'audC', 'Vpres']
     elif fit_type == 'task':
         predictors = ['task']
     elif fit_type == 'choice':
@@ -77,6 +83,9 @@ def get_tested_models(fit_type = 'passive'):
             'av',
             'av_aud_bilateral',
             'av_bilateral',
+            'av_multiplicative',
+            'av_bilateral_multiplicative',
+            'a_vPres',
             'baseline',
 
         ]
@@ -118,6 +127,8 @@ def get_visual_models(model_list):
 
     return [m for m in model_list if'visC' in get_predictors(m)]
 
+
+
 def get_model_gamma_combinations(**kwargs):
     # Define the gamma values for each model
     # vis and av models will have a range of gammas, while the rest will be fixed at 1
@@ -126,8 +137,7 @@ def get_model_gamma_combinations(**kwargs):
     # most gammas appear to fall between 0 and 2 with occasionally going to 3,4
 
     gamma_grid = np.concatenate([
-        np.round(np.arange(0.1, 2.1, 0.1),2), 
-        np.array([2.5])
+        np.round(np.arange(0.5, 1.6, 0.1),2), 
     ])
 
     tested_models = get_tested_models(**kwargs)
@@ -165,6 +175,20 @@ def get_predictor_matrix(df,hemi=1):
     X['choice'] *= hemi
 
     X['task'] = (df.session=='active').astype('int')
+
+    X['whisker'] = df['movement']
+
+    X['Vpres'] = (df.visDiff!=0).astype('int')
+    # congruent non-linearity. Scales the same way as v as aud does not have an intermediate value in practice 
+    # !!! can't fit this way if aud is not only 1 or 0!
+
+    if set(audDiff_hemispheric.unique()) == {0, -1, 1}:
+        X['visC_congruent'] = X['visC'] * X['audC']
+        X['visI_congruent'] = X['visI'] * X['audI']
+
+
+    else:
+        print('Warning: audDiff is not only 1 or 0, so the congruent non-linearity will not be applied')
 
     return X
 
@@ -345,6 +369,8 @@ def fit_session(df,clusters,fit_type = 'passive'):
 
     clusters_added_columns = ['neuronID','BerylAcronym','bombcell_class','is_good','ml','ap','dv']
     model_fits = model_fits.merge(clusters[clusters_added_columns], on='neuronID', how='left')
+
+
     return model_fits
 
 ############ functions for processing the whole dataset ############
@@ -384,7 +410,8 @@ def get_time_params(time_window,pre_time = None,post_time = None):
 
 def fit_dataset(fit_type='passive',
         dataset_kwargs={'set_name':'all'},
-        time_kwargs={'time_window':'stim','pre_time':0.0,'post_time':0.15}
+        time_kwargs={'time_window':'stim','pre_time':0.0,'post_time':0.15},
+        recompute=False
         ):
     """_summary_
 
@@ -392,20 +419,44 @@ def fit_dataset(fit_type='passive',
         dataset_kwargs (dict, optional): _description_. Defaults to {'set_name':'all'}.
         time_kwargs (dict, optional): _description_. Defaults to {'time_window':'stim','pre_time':0.0,'post_time':0.15}.
     """
+    
+    savepath = Path(r'D:\AV_Neural_Data\fit_results\linear_fit_results')
+    subfolder = f"{fit_type}_{dataset_kwargs['set_name']}_{time_kwargs['time_window']}_pre{time_kwargs['pre_time']}_post{time_kwargs['post_time']}"
+    savepath = savepath / subfolder
+    savepath.mkdir(parents=True, exist_ok=True)
 
     sessions = get_ephys_dataset(**dataset_kwargs)
     time_params = get_time_params(**time_kwargs)
     coefs = []
     for _,args in sessions[['subject','date']].iterrows():
-            df,clusters,_  = load_trial_data(**args,**time_params).values()
+            
+            stub = f"{args['subject']}_{args['date']}.csv"
 
-            if df is not None:
-                ## to rewrite this so that we allow multiple tested model sets
-                tested_df = filt_trials(df,fit_type=fit_type)
-                model_fits = fit_session(tested_df,clusters,fit_type=fit_type)
-                model_fits['subject'] = args['subject']
-                model_fits['date'] = args['date']
-                coefs.append(model_fits)
+            savefile = savepath / stub
+
+            if (not savefile.exists()) or recompute:
+                print(f"Fitting {args['subject']} {args['date']} with fit_type {fit_type}...")
+                df,clusters,_  = load_trial_data(**args,**time_params).values()
+
+
+
+                if df is not None:
+                    ## to rewrite this so that we allow multiple tested model sets
+                    tested_df = filt_trials(df,fit_type=fit_type)
+
+
+                    model_fits = fit_session(tested_df,clusters,fit_type=fit_type)
+                    model_fits['subject'] = args['subject']
+                    model_fits['date'] = args['date']
+
+                    model_fits.to_csv(savefile, index=False)
+            
+            else:
+                model_fits = pd.read_csv(savefile, low_memory=False)
+            
+            
+            coefs.append(model_fits)
+
 
     # create a new column that is fitID, and its is a string of subject date and neuronID
     coefs = pd.concat(coefs)
@@ -436,6 +487,11 @@ def compute_means_and_errors(df):
 def generate_pseudo():
     n_points =  600
     visDiff = np.linspace(-1,1,n_points)
+
+    # Ensure visDiff contains exactly zero because else the visPresence models don't visualse well
+    visDiff = np.sort(np.append(visDiff, 0))
+    n_points = len(visDiff)
+
     visC = np.abs(visDiff) * (visDiff>0)
     visI = np.abs(visDiff) * (visDiff<0)
 
@@ -459,7 +515,7 @@ def generate_pseudo():
 
     return pseudo
 
-def plot_prediction(df,nrn_model):
+def plot_prediction(df,nrn_model,plot_gamma_transformed_v=True):
     print(nrn_model)
     # to plot the actual points 
     nrn = nrn_model.neuronID.values[0]
@@ -468,7 +524,8 @@ def plot_prediction(df,nrn_model):
     nrn_gamma = nrn_model.gamma.values[0]
 
     nrn_df = get_predictor_matrix(df,hemi=nrn_hemi)
-    nrn_df = gamma_transform(nrn_df,gamma=nrn_gamma)
+    if plot_gamma_transformed_v:
+        nrn_df = gamma_transform(nrn_df,gamma=nrn_gamma)
 
 
 
@@ -527,15 +584,26 @@ def plot_prediction(df,nrn_model):
             #     zorder=3,
             # )
 
-            # Plot the prediction
-            current_pseudo = gamma_transform(current_pseudo, gamma=nrn_gamma)
-            visDiff = current_pseudo['visC'] - current_pseudo['visI']
 
-            # update the pseudo with the current task and choice
+                       # update the pseudo with the current task and choice
             current_pseudo['task'] = task
-            current_pseudo['choice'] = choice
+            current_pseudo['choice'] = choice   
+            current_pseudo['visC_congruent']  = current_pseudo['visC'] * current_pseudo['audC']
+            current_pseudo['visI_congruent']  = current_pseudo['visI'] * current_pseudo['audI']
+            current_pseudo['Vpres'] = ((current_pseudo.visC-current_pseudo.visI)!=0).astype('int')
 
-            predictorM = current_pseudo[predictors].copy()
+
+            current_pseudo_gamma = gamma_transform(current_pseudo, gamma=nrn_gamma)
+            
+            # whether to plot the prediction with hamma transformation or not 
+            if plot_gamma_transformed_v:
+                visDiff = current_pseudo_gamma['visC'] - current_pseudo_gamma['visI']
+            else:
+                visDiff = current_pseudo['visC'] - current_pseudo['visI']
+
+
+
+            predictorM = current_pseudo_gamma[predictors].copy()
             pred = np.dot(weights.values, predictorM.values.T).flatten()
             ax.plot(visDiff, pred, color=color, lw=2, linestyle='-')
 

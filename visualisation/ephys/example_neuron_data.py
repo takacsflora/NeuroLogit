@@ -9,12 +9,16 @@ import seaborn as sns
 # test things with example neuron 
 
 
-fit_type = 'passive'
+fit_type = 'active'
 
 
-ev,clusters,rasters = load_trial_data('AV030','2022-12-06',
+ev,clusters,rasters = load_trial_data('AV014','2022-06-08',
                             load_clusters=True,load_raster='stim',
                             avg_kwargs=None).values()
+
+
+
+ev['RT'] = ev.timeline_choiceMoveOn-ev.timeline_audPeriodOn
 
 
 added_conditions = ['choice','visDiff','audDiff']
@@ -31,7 +35,7 @@ rasters = rasters[(rasters['Time'] >= -.05) & (rasters['Time'] <= .4)].copy()
 # plot neuron location 
 
 # Prepare data for plotting
-feature_to_plot = 'neuron_1213'
+feature_to_plot = 'movement'
 
 
 clus_features = clusters[clusters.neuronID==feature_to_plot]
@@ -93,11 +97,11 @@ custom_cmap = LinearSegmentedColormap.from_list("custom_coolwarm", list(zip(posi
 g.map_dataframe(sns.lineplot, 'Time', 'Response', hue=on_hue, linewidth=4, alpha=1, hue_norm=(-1, 1), palette=custom_cmap)
 
 # Add horizontal lines at y=0 for each subplot using the map function
-g.map(plt.axvline, x=0,ymin=.9,ymax=1, color='k', linestyle='-', linewidth=1, alpha=0.7)
+#g.map(plt.axvline, x=0,ymin=.9,ymax=1, color='k', linestyle='-', linewidth=1, alpha=0.7)
 # Adjust the y-axis limits to ensure the plot always includes the bottom of the frame
 min_resp = average_responses['Response'].min() - np.ptp(average_responses['Response'])*.1
 g.map(plt.hlines, y=min_resp, xmin=.15, xmax=0.20, color='k', linestyle='-', linewidth=1, alpha=1)
-g.map(plt.vlines, x=-.07, ymin=min_resp+10, ymax=min_resp+20, color='k', linestyle='-', linewidth=1, alpha=1)
+#g.map(plt.vlines, x=-.07, ymin=min_resp+10, ymax=min_resp+20, color='k', linestyle='-', linewidth=1, alpha=1)
 
 
 # Remove x-axis labels and ticks
@@ -136,9 +140,10 @@ positions = [0, 1]  # Positions for the colors
 custom_red = LinearSegmentedColormap.from_list("custom_red", list(zip(positions, colors)))
 
 aud_palettes= [custom_blue,'Greys',custom_red]
-r_neur = rasters[(rasters.Feature == feature_to_plot) & (rasters.choice==-2)]
+choice = -2 
+r_neur = rasters[(rasters.Feature == feature_to_plot) & (rasters.choice==choice)]
 
-fig, axs = plt.subplots(len(aud_vals), len(vis_vals), figsize=(6, 3), dpi=300, sharex=True, sharey=True)
+fig, axs = plt.subplots(len(aud_vals), len(vis_vals), figsize=(6, 3), dpi=300, sharex=True, sharey=False)
 fig.subplots_adjust(hspace=0.1, wspace=0.1)
 #
 
@@ -149,8 +154,23 @@ for i, aud_val in enumerate(aud_vals):
         r_neur_trialtype = r_neur[(r_neur.visDiff == vis_val) & (r_neur.audDiff == aud_val)]
 
         response_matrix = r_neur_trialtype.pivot(index='Trial', columns='Time', values='Response')
+        
+        if (not response_matrix.empty) & (choice!=-2):
+            rts = ev.loc[r_neur_trialtype.Trial.unique()].rt.values
 
-        cax = ax.matshow(response_matrix, aspect='auto', cmap=aud_palettes[i], vmin=0,vmax=100)
+            rts_sorted  = np.sort(rts)
+            response_matrix_sorted = response_matrix.iloc[np.argsort(rts)]
+
+            cax = ax.matshow(response_matrix_sorted, aspect='auto', cmap=aud_palettes[i])
+            
+            dots = np.array(
+                [np.argmin(np.abs(response_matrix_sorted.columns-rt)) for rt in rts_sorted]
+            )
+
+            ax.scatter(dots, np.arange(len(dots)), color='k', s=10, alpha=1, marker='o', edgecolor='none')
+        elif choice==-2: 
+            cax = ax.matshow(response_matrix, aspect='auto', cmap=aud_palettes[i])
+
 
         # Remove ticks and spines
         

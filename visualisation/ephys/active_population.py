@@ -2,12 +2,15 @@
 from src.ephys.encoding_avg import fit_dataset, get_winning_model
 import pandas as pd
 
+import matplotlib.pyplot as plt
+import seaborn as sns
+
 timing = {'time_window':'stim','pre_time':0.0,'post_time':0.15}
 
 fit_type = 'active'
 subset = ''
 
-recompute = False
+recompute = False 
 path = rf'C:\Users\Flora\Documents\Github\NeuroLogit\data\{fit_type}_{subset}_coefs.csv'
 
 
@@ -20,12 +23,42 @@ if recompute:
 
     
     coefs.to_csv(path,index=False)
+
+
 else:
     coefs = pd.read_csv(path,low_memory=False)
+
 
 coefs['sessionID'] = coefs.subject + '_' + coefs.date
 models = get_winning_model(coefs,thr_scorer='adj_r2',thr=0)
 
+
+#%%
+# looking at gamma fits 
+
+vis_models = coefs[coefs.is_good & ~(coefs.visC).isna() & coefs.subject.isin(['AV034','AV005','FT030'])].copy()
+
+
+scorer = 'r2_score'
+# Group by fitID and gamma, then average adj_r2 within each fitID
+fitid_gamma_avg = vis_models.groupby(['fitID', 'gamma'])[scorer].mean().reset_index()
+
+# Now average over all fitIDs for each gamma
+gamma_avg = fitid_gamma_avg.groupby('gamma')[scorer].mean().reset_index()
+
+# Plot the result: this is the average adj_r2 as a function of gamma, averaged over fitIDs
+sns.lineplot(data=gamma_avg, x='gamma', y=scorer, marker='o')
+plt.title(f'Average {scorer} vs gamma (averaged over nrns)')
+plt.xlabel('gamma')
+plt.ylabel(f'Average {scorer}')
+plt.show()
+#%%
+
+
+fig,ax = plt.subplots(figsize=(6, 6))
+sns.lineplot(data=vis_models[vis_models.subject.isin(['AV034','AV005','FT030'])], x='gamma', y=scorer,  markers=True, dashes=False)
+ax.axvline(x=.5, color='k', linestyle='--', linewidth=0.5)
+ax.axvline(x=1.5, color='k', linestyle='--', linewidth=0.5)
 
 
 #%%
@@ -44,8 +77,6 @@ goodClus = models[(models.is_good) &
 
 #goodClus = models[(models.is_good) & (models.BerylAcronym=='SCs')].copy()
 
-import seaborn as sns
-import matplotlib.pyplot as plt
 
 
 model_counts = goodClus.groupby('sessionID')['model'].value_counts(normalize=True) * 100
