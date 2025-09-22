@@ -1,78 +1,27 @@
 #%%
-from src.ephys.encoding_avg import fit_dataset, get_winning_model
+from util_dat import read_in_all_coefs
 import pandas as pd
 
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-timing = {'time_window':'stim','pre_time':0.0,'post_time':0.15}
-
-fit_type = 'active'
-subset = ''
-
-recompute = False 
-path = rf'C:\Users\Flora\Documents\Github\NeuroLogit\data\{fit_type}_{subset}_coefs.csv'
-
-
-if recompute:
-
-    coefs = fit_dataset(fit_type = fit_type,
-        dataset_kwargs={'set_name':'all', 'subset':subset},
-        time_kwargs=timing
-    )
-
-    
-    coefs.to_csv(path,index=False)
-
-
-else:
-    coefs = pd.read_csv(path,low_memory=False)
-
-
-coefs['sessionID'] = coefs.subject + '_' + coefs.date
-models = get_winning_model(coefs,thr_scorer='adj_r2',thr=0)
-
-
-#%%
-# looking at gamma fits 
-
-vis_models = coefs[coefs.is_good & ~(coefs.visC).isna() & coefs.subject.isin(['AV034','AV005','FT030'])].copy()
-
-
-scorer = 'r2_score'
-# Group by fitID and gamma, then average adj_r2 within each fitID
-fitid_gamma_avg = vis_models.groupby(['fitID', 'gamma'])[scorer].mean().reset_index()
-
-# Now average over all fitIDs for each gamma
-gamma_avg = fitid_gamma_avg.groupby('gamma')[scorer].mean().reset_index()
-
-# Plot the result: this is the average adj_r2 as a function of gamma, averaged over fitIDs
-sns.lineplot(data=gamma_avg, x='gamma', y=scorer, marker='o')
-plt.title(f'Average {scorer} vs gamma (averaged over nrns)')
-plt.xlabel('gamma')
-plt.ylabel(f'Average {scorer}')
-plt.show()
-#%%
-
-
-fig,ax = plt.subplots(figsize=(6, 6))
-sns.lineplot(data=vis_models[vis_models.subject.isin(['AV034','AV005','FT030'])], x='gamma', y=scorer,  markers=True, dashes=False)
-ax.axvline(x=.5, color='k', linestyle='--', linewidth=0.5)
-ax.axvline(x=1.5, color='k', linestyle='--', linewidth=0.5)
+coefs,models = read_in_all_coefs(fit_type='active_choice', subset='',
+                                  recompute_summary = True, recompute_parts=False,
+                                  add_behav_params=True, get_best=True,
+                                  time_window ='stim_bin',pre_time=0.15,post_time=0)
 
 
 #%%
 
-
-# goodClus = models[(models.is_good) &
-#                    ((models.BerylAcronym=='SCm')|(models.BerylAcronym=='SCs')) & 
-#                    (models.subject.isin(['AV025','AV030','AV034'])) 
-#                    ].copy()
 
 goodClus = models[(models.is_good) &
-                   ((models.BerylAcronym=='MOs')) & 
-                   (models.subject.isin(['AV023'])) 
+                   ((models.BerylAcronym=='MOs')) #|(models.BerylAcronym=='SCs'))
                    ].copy()
+
+# goodClus = models[(models.is_good) &
+#                    ((models.BerylAcronym=='MOs')) & 
+#                    (models.subject.isin(['AV023'])) 
+#                    ].copy()
 
 
 #goodClus = models[(models.is_good) & (models.BerylAcronym=='SCs')].copy()
@@ -96,16 +45,25 @@ plt.xticks(rotation=45)
 plt.tight_layout()
 plt.show()
 
+
+model_counts = model_counts.merge(goodClus[['sessionID','SPL_behav','bias_behav']].drop_duplicates(), on='sessionID', how='left')
+
+
+#%%
+
+
+sns.scatterplot(data=model_counts[model_counts.model=='choice'], x='bias_behav', y='percentage')
+
 # Lineplot showing the percentage of each model per session
 #%%
-model_counts['subject'] = model_counts['sessionID'].str.split('_').str[0]
+#model_counts['subject'] = model_counts['sessionID'].str.split('_').str[0]
 plt.figure(figsize=(12, 8))
 
 from src.ephys.encoding_avg import get_predictors
 
 fig,ax = plt.subplots(1, 1, figsize=(12, 8))
 
-sns.lineplot(data=model_counts, x='model', y='percentage', hue='subject', marker='o',ax=ax)
+sns.lineplot(data=model_counts, x='model', y='percentage', hue='SPL_behav', marker='o',ax=ax)
 ax.set_title('Percentage of neurons per sesssion, on avg')
 ax.set_ylabel('Percentage')
 ax.set_xlabel('Model')
@@ -122,28 +80,72 @@ plt.show()
 
 
 
-# %%
-fullm = coefs[(coefs.model == 'av_aud_bilateral_choice')].copy()
-fullm = get_winning_model(fullm,thr_scorer='explained_variance_score',thr=-40)
-
-evthr = 0.05
-fullm['is_audC'] = fullm['explained_variance_score_audC'] > evthr
-fullm['is_visC'] = fullm['explained_variance_score_visC'] > evthr
-fullm['is_audI'] = fullm['explained_variance_score_audI'] > evthr
-fullm['is_task'] = fullm['explained_variance_score_task'] > evthr
-fullm['is_choice'] = fullm['explained_variance_score_choice'] > evthr
-
-fullm = fullm[fullm.is_good].copy()
-
-
-#%%
-ps = ['audC','visC','audI','task','choice']
-
-explained_vars = [f'explained_variance_score_{p}' for p in ps]
-
-sns.scatterplot(data=fullm,x='audI',y='choice',hue='date',palette='Set2',legend=False)
-
 #plt.ylim([-.25,2.6])
 #plt.xlim([-.25,1])
 
 # %%
+#%%
+average_dv_per_session = goodClus.groupby(['subject', 'date'])['dv'].mean().reset_index()
+
+# Select sessions within each subject that are at least 600 dv apart
+selected_sessions = []
+for subject, group in average_dv_per_session.groupby('subject'):
+    group = group.sort_values('dv')
+    selected = []
+    for _, row in group.iterrows():
+        if not selected or all(abs(row['dv'] - s['dv']) >= 600 for s in selected):
+            selected.append(row)
+    selected_sessions.extend(selected)
+
+selected_sessions = pd.DataFrame(selected_sessions)
+
+# Filter selected_coefs to keep only neurons from selected_sessions
+selected_coefs = goodClus.merge(
+    selected_sessions[['subject', 'date']],
+    on=['subject', 'date'],
+    how='inner'
+)
+
+
+
+
+# %%
+# maybe let's do the anatomy plot for each mouse or group of cells? 
+from floras_helpers.anat_plots import anatomy_plotter
+
+
+anat = anatomy_plotter()
+fig,ax = plt.subplots(1,1,figsize=(4, 5),dpi=300)
+anat.plot_anat_canvas(ax=ax,coord = -1300, axis='ap')
+
+anat.plot_points(selected_coefs['ml'],selected_coefs['dv'],unilateral=True,c = 'grey',alpha=0.2,marker = '.',s=100,edgecolor=None)
+
+param = 'audI'
+cc = selected_coefs[selected_coefs[param].notna()].copy()
+
+import numpy as np
+# cc['is_extrame_gamma'] = np.abs((cc['gamma']-1))
+# anat.plot_points(cc['ml'],cc['dv'],unilateral=True,c = cc['gamma'],alpha=1,marker = '.',s=100,edgecolor='k',cmap='RdYlBu',vmin=0,vmax=2)
+
+
+anat.plot_points(cc['ml'],cc['dv'],unilateral=True,c = cc[param],alpha=1,marker = '.',s=200,edgecolor='k',cmap='coolwarm',vmin=-20,vmax=20)
+
+ax.set_xlim([-2200, -200])
+ax.set_ylim([-3000, -500])
+ax.invert_xaxis()
+ax.set_title(f'{param} weight')
+# %%
+# %%
+
+weights_comparison = selected_coefs.copy()
+weights_comparison = weights_comparison.fillna(0)
+
+
+            # Make all pairplots have the same x and y axes
+g = sns.pairplot(weights_comparison,
+                    vars=['baseline', 'visC', 'audC', 'audI', 'choice'],
+                    kind='scatter',
+                    hue='BerylAcronym',
+                    diag_kind='kde',
+                    markers='o')
+ # %%

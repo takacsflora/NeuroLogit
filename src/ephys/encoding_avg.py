@@ -42,27 +42,45 @@ def get_predictors(fit_type='vis'):
     elif fit_type == 'task':
         predictors = ['task']
     elif fit_type == 'choice':
+        predictors = ['choice']
+    elif fit_type == 'choice_engaged':
         predictors = ['task','choice']
     elif fit_type == 'vis_task':
         predictors = ['visC','task']
     elif fit_type == 'aud_task':
         predictors = ['audC','task']
+    elif fit_type == 'aud_ipsi_task':
+        predictors = ['audI','task']
     elif fit_type == 'aud_bilateral_task':
         predictors = ['audC','audI','task']
     elif fit_type == 'av_task_bilateral':
-        predictors = ['visC','audC','audI','task']
+        predictors = ['visC','audC','audI','task'] # no
     elif fit_type == 'av_task':
         predictors = ['visC','audC','task']
-    elif fit_type == 'vis_choice':
+    elif fit_type == 'vis_choice_engaged':
         predictors = ['visC','task','choice']
-    elif fit_type == 'aud_choice':
+    elif fit_type == 'aud_choice_engaged':
         predictors = ['audC','task','choice']
-    elif fit_type == 'aud_bilateral_choice':
+    elif fit_type == 'aud_ipsi_choice_engaged':
+        predictors = ['audI','task','choice']
+    elif fit_type == 'aud_bilateral_choice_engaged':
         predictors = ['audC','audI','task','choice']
-    elif fit_type == 'av_choice':
+    elif fit_type == 'av_choice_engaged':
         predictors = ['visC','audC','task','choice']
-    elif fit_type == 'av_aud_bilateral_choice':
+    elif fit_type == 'av_aud_bilateral_choice_engaged':
         predictors = ['visC','audC','audI','task','choice']
+    elif fit_type== 'vis_choice':
+        predictors = ['visC','choice']
+    elif fit_type == 'aud_choice':
+        predictors = ['audC','choice']
+    elif fit_type == 'aud_ipsi_choice':
+        predictors = ['audI','choice']
+    elif fit_type == 'aud_bilateral_choice':
+        predictors = ['audC','audI','choice']
+    elif fit_type == 'av_choice':
+        predictors = ['visC','audC','choice']
+    elif fit_type == 'av_aud_bilateral_choice':
+        predictors = ['visC','audC','audI','choice']    
     elif fit_type == 'baseline':
         predictors = []
 
@@ -79,6 +97,7 @@ def get_tested_models(fit_type = 'passive'):
             'vis',
             'vis_bilateral',
             'aud',
+            'aud_ipsi',
             'aud_bilateral',
             'av',
             'av_aud_bilateral',
@@ -89,28 +108,38 @@ def get_tested_models(fit_type = 'passive'):
             'baseline',
 
         ]
-    elif fit_type == 'active':
+    elif fit_type == 'active_choice':
         models = [
+            'baseline',
+            'choice',
             'vis',
             'aud',
-            'aud_bilateral',
+            'aud_ipsi',
             'av',
-            'av_aud_bilateral',
-            'baseline',
-            'task',
-            'choice',
-            'vis_task',
-            'aud_task',
-            'av_task',
-            'aud_bilateral_task',
-            'av_task_bilateral',
             'vis_choice',
             'aud_choice',
+            'aud_ipsi_choice',
             'av_choice', 
-            'aud_bilateral_choice',
-            'av_aud_bilateral_choice',
-
         ]
+    elif fit_type == 'active_engaged':
+        models = [
+            'baseline',
+            'task',
+            'choice_engaged',
+            'vis',
+            'aud',
+            'aud_ipsi',
+            'av',
+            'vis_task',
+            'aud_task',
+            'aud_ipsi_task',
+            'av_task',
+            'vis_choice_engaged',
+            'aud_choice_engaged',
+            'aud_ipsi_choice_engaged',
+            'av_choice_engaged',
+        ]
+
 
     return models
 
@@ -174,6 +203,7 @@ def get_predictor_matrix(df,hemi=1):
     X['choice'] = df['choice'].replace({1: 1, 0: -1, -1: 0, -2: 0})
     X['choice'] *= hemi
 
+    #X['choice'] = (X.choice>0).astype('int')
     X['task'] = (df.session=='active').astype('int')
 
     X['whisker'] = df['movement']
@@ -214,11 +244,16 @@ def filt_trials(df,fit_type = 'passive'):
 
     if fit_type == 'passive':
         df = df[df.session=='passive'].copy()
-    elif fit_type == 'active':
+    elif 'active' in fit_type:
         # will get rid of the NoGo trials atm because they are a bit of a mess? 
         # in general here, I might not be filtering everything...
-        df = df[df.choice_categorical!='NoGo'].copy()
+        #df = df[df.choice_categorical!='NoGo'].copy()
+        # this is where we could also get rid of trials where the choice is too early...
+        df = df[~((df.session=='active') & np.isnan(df.timeline_choiceMoveDir))].copy()
 
+        if fit_type=='active_choice':
+            # if we are fitting the choice bin, we need to filter out the passive trials
+            df = df[df.session=='active'].copy()
     else:
         raise ValueError('fit_type not recognized')
     
@@ -367,7 +402,8 @@ def fit_session(df,clusters,fit_type = 'passive'):
     model_fits = pd.concat([train_and_evaluate_model(df,clusters,hemi=hemi,fit_type=fit_type) for hemi in unique_hemis])
 
 
-    clusters_added_columns = ['neuronID','BerylAcronym','bombcell_class','is_good','ml','ap','dv']
+    clusters_added_columns = ['neuronID','BerylAcronym','bombcell_class','is_good','ml','ap','dv',
+                              'presenceRatio','percentageSpikesMissing_gaussian','fractionRPVs_estimatedTauR', 'signalToNoiseRatio']
     model_fits = model_fits.merge(clusters[clusters_added_columns], on='neuronID', how='left')
 
 
@@ -444,12 +480,13 @@ def fit_dataset(fit_type='passive',
                     ## to rewrite this so that we allow multiple tested model sets
                     tested_df = filt_trials(df,fit_type=fit_type)
 
-
-                    model_fits = fit_session(tested_df,clusters,fit_type=fit_type)
-                    model_fits['subject'] = args['subject']
-                    model_fits['date'] = args['date']
-
-                    model_fits.to_csv(savefile, index=False)
+                    if tested_df.size>0:
+                        model_fits = fit_session(tested_df,clusters,fit_type=fit_type)
+                        model_fits['subject'] = args['subject']
+                        model_fits['date'] = args['date']
+                        model_fits.to_csv(savefile, index=False)
+                    else:
+                        model_fits=None
             
             else:
                 model_fits = pd.read_csv(savefile, low_memory=False)
@@ -473,7 +510,7 @@ def get_winning_model(model_fits,thr_scorer='adj_r2',thr=0):
     best_model = best_model.apply(
         lambda row: baseline_model[baseline_model['fitID'] == row['fitID']].iloc[0]
         if row[thr_scorer] < thr else row, axis=1
-    )
+    ).copy()
     return best_model
 
 
@@ -515,7 +552,7 @@ def generate_pseudo():
 
     return pseudo
 
-def plot_prediction(df,nrn_model,plot_gamma_transformed_v=True):
+def plot_prediction(df,nrn_model,plot_gamma_transformed_v=True,axes=None):
     print(nrn_model)
     # to plot the actual points 
     nrn = nrn_model.neuronID.values[0]
@@ -549,7 +586,8 @@ def plot_prediction(df,nrn_model,plot_gamma_transformed_v=True):
 
     # Loop over unique combinations of task and choice for subplots
     n_combinations = len(task_choice_combinations)
-    fig, axes = plt.subplots(1, n_combinations, figsize=(2*n_combinations, 2), dpi=300, sharex=True, sharey=True)
+    if axes is None:
+        fig, axes = plt.subplots(1, n_combinations, figsize=(2*n_combinations, 2), dpi=300, sharex=True, sharey=True)
     
     if n_combinations == 1:
         axes = [axes]
@@ -608,7 +646,7 @@ def plot_prediction(df,nrn_model,plot_gamma_transformed_v=True):
             ax.plot(visDiff, pred, color=color, lw=2, linestyle='-')
 
         ax.set_title(f"Task: {task}, Choice: {choice}")
-        ax.axhline(weights.baseline.values, color='black', linestyle='--', linewidth=0.5)
+        #ax.axhline(weights.baseline.values, color='black', linestyle='--', linewidth=0.5)
         ax.axvline(0, color='black', linestyle='--', linewidth=0.5)
 
         ax.spines['top'].set_visible(False)
@@ -619,5 +657,4 @@ def plot_prediction(df,nrn_model,plot_gamma_transformed_v=True):
 
     # Add legend and adjust layout
     handles, labels = ax.get_legend_handles_labels()
-    fig.legend(handles, labels, title="audDiff", bbox_to_anchor=(1.4, .8))
-    fig.tight_layout()
+    

@@ -163,7 +163,6 @@ class av_multi_symmetric_audio(av_multi):
                 )
 
         return zL,zR  
-
 ## the asymetric models where the parameters can also take new values depedning on which side they support
 class av_multi_asymetric_audio(av_multi):
     def __init__(self,
@@ -236,11 +235,6 @@ class av_multi_asymetric(av_multi):
 
 
 #### the opto models  ####
-## we have estabished that in my case likely that the asymetric_audio is the best model
-# so opto models will be based on that 
-
-# the full model with opto
-
 
 # maybe chainge to the symmetric audio model
 class avm_opto(av_multi):

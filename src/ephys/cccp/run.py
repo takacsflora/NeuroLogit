@@ -5,7 +5,6 @@ from scipy.stats import rankdata
 
 
 
-
 def get_mann_whitneyU(x,y,n_shuffles=20):
     """
     function to calculate the mann-Whitney U(x) statistic for each unit
@@ -64,7 +63,9 @@ def combined_condition_U(spike_counts,trialChoice,trialConditions,n_shuffles=200
 
     """
     uCond =np.unique(trialConditions)
+    
     nTotal = np.zeros(((n_shuffles+1,) + spike_counts.shape[1:]))
+
     dTotal = 0
     for c in uCond: 
         inclT = trialConditions==c
@@ -74,7 +75,7 @@ def combined_condition_U(spike_counts,trialChoice,trialConditions,n_shuffles=200
         nB = chB.sum()
         uA = get_mann_whitneyU(spike_counts[chA],spike_counts[chB],n_shuffles=n_shuffles)
         nTotal = nTotal+uA
-        dTotal = dTotal+nA+nB
+        dTotal = dTotal+nA*nB
 
     cp = nTotal/dTotal
     t = rankdata(cp,axis=0)
@@ -117,6 +118,32 @@ def get_trialtypes(df,to_discriminate='choice'):
         df = df[(~df.is_auditoryTrial) & (~df.is_blankTrial)].copy()
         df['to_discriminate'] = df['visDiff']>0
         df['trialtype'] = df.groupby(['audDiff','choice','stim_visContrast']).ngroup()
+    
+    elif to_discriminate == 'passive':
+        df['to_discriminate'] = (df['session']=='active').astype('bool')
+        
+        # this is done basically for active vs passive. To try to account for drift we can create artificial trial types as 
+        # the first half of passive 2nd half etc.
+        n_groups = 5
+
+        active_trials = df[df['to_discriminate']]
+        passive_trials = df[~df['to_discriminate']]
+        n_active_trials = active_trials.shape[0]
+        n_passive_trials = passive_trials.shape[0]
+        # 
+        min_trials = min(n_active_trials, n_passive_trials)
+        active_trials = active_trials.iloc[:min_trials]
+        passive_trials = passive_trials.iloc[:min_trials]
+
+        trialtype_labels = np.repeat(np.arange(n_groups),min_trials//n_groups)
+        if len(trialtype_labels)<min_trials:
+            trialtype_labels = np.append(np.zeros(min_trials - len(trialtype_labels)),trialtype_labels)
+
+        active_trials['trialtype'] = trialtype_labels.astype('int')
+        passive_trials['trialtype'] = trialtype_labels.astype('int')
+
+        df = pd.concat([active_trials, passive_trials])
+
     # count the number of rows in each trialtype 
     trialtype_counts = df['trialtype'].value_counts()
     # Filter out trialtypes that do not have at least 2 types of choices
@@ -126,7 +153,7 @@ def get_trialtypes(df,to_discriminate='choice'):
 
     return df
 
-def run_combined_condition_U(df, to_discriminate='choice', **kws):
+def run_combined_condition_U(df, to_discriminate='choice',fr_thr = 0.1,min_trials = 10, **kws):
     """helper function to run ccCP on all neuron columns in trial data.
 
     Args:
@@ -139,11 +166,26 @@ def run_combined_condition_U(df, to_discriminate='choice', **kws):
     neuron_columns = [col for col in df.columns if 'neuron' in col]
 
     ccCP_df = get_trialtypes(df, to_discriminate=to_discriminate)
-    _, p, _ = combined_condition_U(ccCP_df[neuron_columns].values,
+
+    if len(ccCP_df)<min_trials:
+        print(f"not enough trials to run ccCP for {to_discriminate}")
+        return pd.DataFrame()
+
+    cp, p, _ = combined_condition_U(ccCP_df[neuron_columns].values,
                                    ccCP_df['to_discriminate'].values,
                                    ccCP_df['trialtype'].values,
                                    n_shuffles=2000)
-    
-    results= pd.DataFrame({'neuronID':neuron_columns,f'ccp_{to_discriminate}':p})
 
+    # for each neuron we will compute the variance and the average fr in the tested period
+    fr_mean = ccCP_df[neuron_columns].mean()
+
+    # get the fr for each condition
+    fr_per_condition = ccCP_df.groupby('to_discriminate')[neuron_columns].mean()
+    # subtract True - False (from what is being discriminated)
+    fr_diff = (fr_per_condition.loc[True] - fr_per_condition.loc[False])
+
+    results= pd.DataFrame({'neuronID':neuron_columns,f'p_{to_discriminate}':p,f'cp_{to_discriminate}':cp, f'fr_mean_{to_discriminate}': fr_mean, f'fr_diff_{to_discriminate}': fr_diff})
+
+    # calculate the average difference between the two options tested
+    
     return results

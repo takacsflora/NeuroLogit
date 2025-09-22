@@ -2,6 +2,7 @@
 
 import numpy as np
 from src.ephys.dat_utils import load_trial_data
+from src.ephys.encoding_avg import filt_trials, get_time_params
 
 import matplotlib.pyplot as plt 
 import seaborn as sns
@@ -9,13 +10,18 @@ import seaborn as sns
 # test things with example neuron 
 
 
-fit_type = 'active'
+fit_type = 'active_choice'
+time_window = 'stim_bin'
 
+time_params = get_time_params(time_window=time_window, pre_time=0.15, post_time=0.4)
 
-ev,clusters,rasters = load_trial_data('AV014','2022-06-08',
-                            load_clusters=True,load_raster='stim',
-                            avg_kwargs=None).values()
+#%%
+ev,clusters,rasters = load_trial_data('AV030','2022-12-08',
+                            load_clusters=True,**time_params).values()
 
+ev = filt_trials(ev,fit_type = fit_type)
+
+rasters = rasters[np.isin(rasters.Trial,ev.index)].copy()
 
 
 ev['RT'] = ev.timeline_choiceMoveOn-ev.timeline_audPeriodOn
@@ -25,7 +31,11 @@ added_conditions = ['choice','visDiff','audDiff']
 rasters = rasters.merge(ev[added_conditions], left_on='Trial', right_index=True, how='left')
 
 
-rasters = rasters[(rasters['Time'] >= -.05) & (rasters['Time'] <= .4)].copy()
+
+
+
+
+
 
 #%%
 
@@ -35,7 +45,7 @@ rasters = rasters[(rasters['Time'] >= -.05) & (rasters['Time'] <= .4)].copy()
 # plot neuron location 
 
 # Prepare data for plotting
-feature_to_plot = 'movement'
+feature_to_plot = 'neuron_1061'
 
 
 clus_features = clusters[clusters.neuronID==feature_to_plot]
@@ -71,7 +81,7 @@ on_hue  = 'audDiff'
 
 
 # Average the responses across trials for each combination of conditions
-average_responses = rasters[(rasters.Feature == feature_to_plot) & (rasters.choice==-2)].groupby(
+average_responses = rasters[(rasters.Feature == feature_to_plot) & (rasters.choice==1)].groupby(
     [on_y, on_x, on_hue, 'Time']
 )['Response'].mean().reset_index()
 
@@ -140,7 +150,7 @@ positions = [0, 1]  # Positions for the colors
 custom_red = LinearSegmentedColormap.from_list("custom_red", list(zip(positions, colors)))
 
 aud_palettes= [custom_blue,'Greys',custom_red]
-choice = -2 
+choice = 1
 r_neur = rasters[(rasters.Feature == feature_to_plot) & (rasters.choice==choice)]
 
 fig, axs = plt.subplots(len(aud_vals), len(vis_vals), figsize=(6, 3), dpi=300, sharex=True, sharey=False)
@@ -163,9 +173,15 @@ for i, aud_val in enumerate(aud_vals):
 
             cax = ax.matshow(response_matrix_sorted, aspect='auto', cmap=aud_palettes[i])
             
-            dots = np.array(
-                [np.argmin(np.abs(response_matrix_sorted.columns-rt)) for rt in rts_sorted]
-            )
+            if time_window == 'choice_bin':
+                dots = np.array(
+                    [np.argmin(np.abs(-response_matrix_sorted.columns-rt)) for rt in rts_sorted]
+                )
+
+            else: 
+                dots = np.array(
+                    [np.argmin(np.abs(response_matrix_sorted.columns-rt)) for rt in rts_sorted]
+                )
 
             ax.scatter(dots, np.arange(len(dots)), color='k', s=10, alpha=1, marker='o', edgecolor='none')
         elif choice==-2: 

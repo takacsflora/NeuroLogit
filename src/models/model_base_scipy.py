@@ -153,7 +153,6 @@ class Logit(BaseTrainer):
         predictions = self.predict_proba(X) 
         return metrics.log_loss(y, predictions, normalize=True) 
     
-
 class MultinomialLogit(Logit):
     def __init__(self, param_names, param_init=None, param_bounds=None):
         super().__init__(param_names, param_init,param_bounds)
@@ -181,8 +180,6 @@ class MultinomialLogit(Logit):
     
     def predict(self, X):
         return np.argmax(self.predict_proba(X), axis=1)
-
-    
 
 class LinearRegression(BaseTrainer):
     def __init__(self, param_names, param_init=None, param_bounds=None):

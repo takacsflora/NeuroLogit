@@ -1,50 +1,33 @@
 
 #%%
 
-from src.ephys.encoding_avg import fit_dataset, get_winning_model
+from util_dat import read_in_all_coefs
 import pandas as pd
 
-timing = {'time_window':'stim','pre_time':0.0,'post_time':0.15}
-
-fit_type = 'passive'
-subset = ''
-
-recompute = False
-path = rf'C:\Users\Flora\Documents\Github\NeuroLogit\data\{fit_type}_{subset}_coefs.csv'
-
-
-if recompute:
-
-    coefs = fit_dataset(fit_type = fit_type,
-        dataset_kwargs={'set_name':'all', 'subset':subset},
-        time_kwargs=timing
-    )
-
-    
-    coefs.to_csv(path,index=False)
-else:
-    coefs = pd.read_csv(path,low_memory=False)
-
-coefs['sessionID'] = coefs.subject + '_' + coefs.date
-
-models = get_winning_model(coefs,thr_scorer='adj_r2',thr=0)
-
+coefs,models = read_in_all_coefs(fit_type='passive', subset='', 
+                                recompute=False, 
+                                add_behav_params=True,
+                                get_best=True)
 
 # %%
 # 
 # 'AV005','AV008','AV014','FT030','FT032'
 
 goodClus = models[(models.is_good) &
-                   ((models.BerylAcronym=='SCm')|(models.BerylAcronym=='SCs')) & 
-                   (models.subject.isin(['AV005','AV008','AV014','FT030','FT032','AV025','AV030','AV034'])) 
+                  ((models.BerylAcronym=='SCm')|(models.BerylAcronym=='SCs'))  
+                  # (models.subject.isin(['AV005','AV008','AV014','FT030','FT032','AV025','AV030','AV034'])) 
                    ].copy()
 
-# goodClus = models[(models.is_good) &
-#                    ((models.BerylAcronym=='MOs')) & 
-#                    (models.subject.isin(['AV007','AV013'])) 
-#                    ].copy()
 
-#goodClus = models[(models.is_good) & (models.BerylAcronym=='SCs')].copy()
+# Calculate the fraction of SCm and SCs neurons per sessionID
+sc_counts = goodClus.groupby(['sessionID', 'BerylAcronym']).size().unstack(fill_value=0)
+sc_counts['total'] = sc_counts.sum(axis=1)
+sc_counts['SCs_frac'] = sc_counts.get('SCs', 0) / sc_counts['total']
+
+# Map the winner back to goodClus
+goodClus = goodClus.merge(sc_counts['SCs_frac'], left_on='sessionID', right_index=True, how='left')
+
+#%%
 
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -52,6 +35,37 @@ import matplotlib.pyplot as plt
 
 model_counts = goodClus.groupby('sessionID')['model'].value_counts(normalize=True) * 100
 model_counts = model_counts.rename('percentage').reset_index()
+model_counts[['subject', 'date']] = model_counts['sessionID'].str.split('_', expand=True)
+model_counts = model_counts.merge(goodClus[['sessionID', 'SCs_frac','SPL_behav']].drop_duplicates(), on='sessionID', how='left')
+
+#%%
+import numpy as np
+
+
+
+desired_model_order = ['baseline', 'vis', 'vis_bilateral',
+                    'aud','aud_ipsi','aud_bilateral',
+                    'av','av_aud_bilateral','av_bilateral',
+                    'av_multiplicative','av_bilateral_multiplicative','a_vPres'] 
+
+
+model_counts_per_sess = model_counts.pivot('model', 'sessionID', 'percentage').reindex(desired_model_order)
+
+# Order sessionIDs by SCs_frac (fraction of SCs neurons per session)
+session_order = sc_counts['SCs_frac'].sort_values(ascending=False).index
+model_counts_per_sess = model_counts_per_sess[session_order]
+
+# plot per sessionID 
+fig,ax = plt.subplots(1, 1, figsize=(20, 5), dpi=150)
+sns.heatmap(data=model_counts_per_sess,
+            annot=True, fmt=".1f", cmap='Oranges', cbar_kws={'label': 'Percentage'},vmin=5,vmax=20,ax=ax)
+        # Impose a specific row order on the heatmap
+
+#%%
+
+
+
+
 
 
 # Order the models by descending model counts
@@ -129,18 +143,43 @@ anat.plot_anat_canvas(ax=ax,coord = 3800, axis='ap')
 
 anat.plot_points(selected_coefs['ml'],selected_coefs['dv'],unilateral=True,c = 'grey',alpha=0.2,marker = '.',s=100,edgecolor=None)
 
-param = 'visC'
+param = 'Vpres'
 cc = selected_coefs[selected_coefs[param].notna()].copy()
 
 import numpy as np
-cc['is_extrame_gamma'] = np.abs((cc['gamma']-1))
-anat.plot_points(cc['ml'],cc['dv'],unilateral=True,c = cc['gamma'],alpha=1,marker = '.',s=100,edgecolor='k',cmap='RdYlBu',vmin=0,vmax=2)
+# cc['is_extrame_gamma'] = np.abs((cc['gamma']-1))
+# anat.plot_points(cc['ml'],cc['dv'],unilateral=True,c = cc['gamma'],alpha=1,marker = '.',s=100,edgecolor='k',cmap='RdYlBu',vmin=0,vmax=2)
 
 
-#anat.plot_points(cc['ml'],cc['dv'],unilateral=True,c = cc[param],alpha=1,marker = '.',s=200,edgecolor='k',cmap='coolwarm',vmin=-20,vmax=20)
+anat.plot_points(cc['ml'],cc['dv'],unilateral=True,c = cc[param],alpha=1,marker = '.',s=200,edgecolor='k',cmap='coolwarm',vmin=-20,vmax=20)
 
 ax.set_xlim([-2200, -200])
 ax.set_ylim([-3000, -500])
 ax.invert_xaxis()
 ax.set_title(f'{param} weight')
+# %%
+
+weights_comparison = selected_coefs.copy()
+weights_comparison = weights_comparison.fillna(0)
+
+
+            # Make all pairplots have the same x and y axes
+g = sns.pairplot(weights_comparison,
+                    vars=['baseline', 'visC', 'visI', 'audC', 'audI', 'Vpres'],
+                    kind='scatter',
+                    diag_kind='kde',
+                    markers='o')
+
+# # Find global min/max for all variables
+# cols = ['baseline', 'visC', 'visI', 'audC', 'audI', 'Vpres']
+# min_val = weights_comparison[cols].min().min()
+# max_val = weights_comparison[cols].max().max()
+
+# # Set the same limits for all axes
+# for i, row in enumerate(g.axes):
+#     for j, ax in enumerate(row):
+#         if ax is not None:
+#             ax.set_xlim(min_val, max_val)
+#             ax.set_ylim(min_val, max_val)
+
 # %%

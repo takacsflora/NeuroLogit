@@ -7,6 +7,14 @@ from utils.plot_utils import get_colormap
 import numpy as np
 
 
+def prettyfy_ax(axes):
+    
+    for a in axes:
+        a.spines['top'].set_visible(False)
+        a.spines['right'].set_visible(False)
+        a.spines['left'].set_position(('outward', 3))
+        a.spines['bottom'].set_position(('outward', 3))
+
 def get_choice_fractions(ev):
     """from trial data get the choice fractions and the Odds for each choice/stimulus combination
     Args:
@@ -45,7 +53,68 @@ def get_choice_fractions(ev):
 
     return choice_fraction
 
+def plot_psychometric(ev,
+    m = None,
+    space = "exp",
+    ax = None):
 
+    markersize = 4
+
+    choice_fraction = get_choice_fractions(ev)
+    custom_palette = get_colormap('auditory', type='continuous')
+    unique_aud = np.sort(choice_fraction.audDiff.unique())   
+    colors = custom_palette(np.linspace(.2, .8, len(unique_aud)))
+
+    if ax is None:
+
+        fig, ax  = plt.subplots(1,1,figsize=(2,2),dpi=300)
+
+
+
+
+    if space == "exp":
+        data_yarg = 'Right'
+        lines = [0.5, 0]
+    elif space == "log":
+        data_yarg = 'logOdds_right_vs_left'
+        lines = [0, 0]
+
+
+    ax.axhline(lines[0], color='black', linestyle=':', linewidth=0.5)
+    ax.axvline(lines[1], color='black', linestyle=':', linewidth=0.5)
+
+    prettyfy_ax([ax]) # set up the axes
+
+        
+    ps = av_pseudoPlotter()
+
+    for i, (a, c) in enumerate(zip(unique_aud, colors)):
+        pkws = dict(
+            color=c, markersize=markersize, marker='o', linestyle='None',
+            markeredgecolor='k', markeredgewidth=0.5
+        )
+        cur_choices = choice_fraction[choice_fraction.audDiff == a]
+
+        if m is None:
+            gamma = 1 
+        else:
+            # if we are using a model than we use the fitted gamma
+            gamma = m.params['gamma']
+
+            matrix = ps.pseudo[i]
+            z = m.predict_log_proba(matrix)
+            pR = m.predict_proba(matrix)
+            visDiff_gamma = matrix.visR ** gamma - matrix.visL ** gamma
+
+            if space == "exp":
+                ax.plot(visDiff_gamma,pR,color = c)
+            elif space == "log":
+                ax.plot(visDiff_gamma,z,color = c)
+
+        visDiff_gamma_data = np.abs(cur_choices.visDiff) ** gamma * np.sign(cur_choices.visDiff)
+
+        ax.plot(visDiff_gamma_data, cur_choices[data_yarg], **pkws) 
+        visDiff_gamma_data = np.abs(cur_choices.visDiff) ** gamma * np.sign(cur_choices.visDiff)
 
 def plot_psychometric_multi(ev, m=None, space="exp", ax=None):
     """
@@ -62,6 +131,7 @@ def plot_psychometric_multi(ev, m=None, space="exp", ax=None):
     choice_fraction = get_choice_fractions(ev)  
     
     custom_palette = get_colormap('auditory', type='continuous')
+    unique_aud = np.sort(choice_fraction.audDiff.unique()) 
     colors = custom_palette(np.linspace(.2, .8, len(unique_aud)))
 
 
@@ -80,8 +150,9 @@ def plot_psychometric_multi(ev, m=None, space="exp", ax=None):
     fig_axes[0].axhline(hlines[0], color='black', linestyle=':', linewidth=0.5)
     fig_axes[1].axhline(hlines[1], color='black', linestyle=':', linewidth=0.5) # the basic setup...
 
+    fig_axes[0].axvline(hlines[1], color='black', linestyle=':', linewidth=0.5)
+    fig_axes[1].axvline(hlines[1], color='black', linestyle=':', linewidth=0.5)
 
-    unique_aud = np.sort(choice_fraction.audDiff.unique())    
     markersize = 4
 
     for i, (a, c) in enumerate(zip(unique_aud, colors)):
@@ -126,13 +197,9 @@ def plot_psychometric_multi(ev, m=None, space="exp", ax=None):
         fig_axes[1].set_yticks([-2, -3])
         fig_axes[1].set_yticklabels([1e-2, 1e-3])
 
-    for a in fig_axes:
-        a.spines['top'].set_visible(False)
-        a.spines['right'].set_visible(False)
-        a.axvline(0, color='black', linestyle=':', linewidth=0.5)
-        a.set_xticklabels('')
-        a.spines['left'].set_position(('outward', 3))
-        a.spines['bottom'].set_position(('outward', 3))
+    
+    prettyfy_ax(fig_axes)  # set up the axes
+    
 
     if created_fig:
         return fig, ax
