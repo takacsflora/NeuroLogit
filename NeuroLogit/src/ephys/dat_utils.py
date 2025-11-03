@@ -3,33 +3,38 @@ import numpy as np
 import pandas as pd
 
 
-def get_source_folder(dat_type='trial_data'):
+from scipy.signal.windows import gaussian
+from scipy.signal import fftconvolve
+
+
+def get_source_folder():
 
     if 'zcbtfta' in str(Path.home()):
         home_rep = '/lustre/home/zcbtfta'
-        source_folder = f'{home_rep}/AV_Neural_data/{dat_type}'
+        source_folder = f'{home_rep}/AV_Neural_data/data'
 
 
     else:
         home_rep = 'D:'
-        source_folder = f'{home_rep}\\AV_Neural_Data\\{dat_type}'
+        source_folder = f'{home_rep}\\AV_Neural_Data_Sept2025\\data'
 
 
     return Path(source_folder)
 
-def get_ephys_dataset(set_name,subset=''):
+def get_ephys_dataset(set_name='all',subset=''):
     """
     function that finds all sessions within a dataset based on trial data
 
     """
 
-    source_folder = get_source_folder('trial_data')
+    source_folder = get_source_folder()
 
 
     if set_name=='all':
-        sessions = list(source_folder.glob(f'{subset}*.csv'))
-    # parse each session's namestring to subject and date
-        session_info = [session.stem.split('_') for session in sessions]
+        session_paths = list((f for f in source_folder.rglob(f'{subset}*') if f.is_dir()))
+        sessions = [f.name for f in session_paths]
+        
+        session_info = [session.split('_') for session in sessions]
         subjects = [info[0] for info in session_info]
         dates = [info[1] for info in session_info]
 
@@ -39,7 +44,7 @@ def get_ephys_dataset(set_name,subset=''):
 
     else:
 
-        source_folder = get_source_folder('meta_data')
+        source_folder = get_source_folder('meta_info')
         meta_data = pd.read_csv(source_folder / f'{set_name}_sessInfo.csv')
         df = pd.DataFrame({'subject':meta_data.subject.values,'date':meta_data.expDate.values})
     
@@ -83,25 +88,30 @@ def normalize_event_values(ev,maxV=None,maxA=None):
                 ev['feedback'] = ev.response_feedback
         return ev
 
+# average firing rates
 def add_average_to_ev(ev,raster,pre_time = 0.1,post_time = 0.15):
     """
     function that adds the average response to the event data
     """
     # filter the raster data for the desired timepoints
-    raster_filtered = raster[(raster['Time'] >= -pre_time) & (raster['Time'] <= post_time)]
+
+
+    t_idxs = (raster['tscale'] >= -pre_time) & (raster['tscale'] <= post_time)
+    responses = raster['data_binned'][:,:,t_idxs]
+    average_activity = np.mean(responses,axis=-1)
+    name_features = [f'neuron_{int(n)}' for n in raster['cscale']]
+
     # group by neuron and trial, then calculate the average response
-    average_activity = raster_filtered.groupby(['Feature', 'Trial'])['Response'].mean().unstack()
-    # keep only features that have 'neuron' in them from the average activity
-    #neuron_average_activity = average_activity.loc[average_activity.index.str.contains('neuron')]
+    average_activity = pd.DataFrame(average_activity,columns=name_features)
 
     # merge the average activity with the event data
 
-    assert ev.shape[0]==average_activity.shape[1], 'cannot unite as evetns and rasters have different number of trials'
-    ev = ev.merge(average_activity.T, left_index=True, right_index=True)
+    assert ev.shape[0]==average_activity.shape[0], 'cannot unite as evetns and rasters have different number of trials'
+    ev = ev.merge(average_activity, left_index=True, right_index=True)
 
     return ev
 
-def preproc_events_data(ev):
+def preproc_events_data(ev, include_no_sound_trials = False):
     # Create a new column 'session' to indicate active or passive session
     ev['session'] = np.where(ev['choice'].isna(), 'passive', 'active')
     # Replace NaNs in 'is_validTrial' with True (as atms nans are the passive trials basically)
@@ -125,23 +135,35 @@ def preproc_events_data(ev):
 
     ev = ev[(ev.is_validTrial) &
                 (~isnogo_block) & 
-                (ev.stim_audAzimuth.isin([-60,0,60])) &  # in some later mice we have 30 degrees but I don't analyse those
-                 ~(np.isnan(ev.timeline_audPeriodOn)) 
+                (ev.stim_audAzimuth.isin([np.nan,-60,0,60]))   # in some later mice we have 30 degrees but I don't analyse those
                 ].copy()
     
+    if not include_no_sound_trials:
+         ev = ev[~(np.isnan(ev.timeline_audPeriodOn))].copy()
 
     # basically numerous combinations of spl and contrast have been trialled during the ephys recordings. 
 
-    spl = ev.stim_audAmplitude.unique()[-1]
+    spl = np.sort(ev.stim_audAmplitude.unique())[-1]
     
     if spl==0.25:
+            if include_no_sound_trials:
+                 aud_cond = [0,0.25]
+            else:
+                 aud_cond = [0.25]
+            
             ev = ev[ev.stim_visContrast.isin([-0.25,-0.1,-0.05,0,0.05,0.1,0.25]) &
-                    (ev.stim_audAmplitude==0.25)
+                    (ev.stim_audAmplitude.isin(aud_cond))
                     ].copy()
     elif spl==0.1:
-            ev = ev[ev.stim_visContrast.isin([-0.4,-0.2,0.1,0,0.2,0.4]) & 
-                    (ev.stim_audAmplitude==0.1)
+            if include_no_sound_trials:
+                 aud_cond = [0,0.1]
+            else:
+                 aud_cond = [0.1]
+            
+            ev = ev[ev.stim_visContrast.isin([-0.4,-0.2,-0.1,0,0.1,0.2,0.4]) & 
+                    (ev.stim_audAmplitude.isin(aud_cond))
                     ].copy()
+    
     else:
             return None
     
@@ -159,10 +181,23 @@ def preproc_events_data(ev):
     # Overwrite NaNs in 'choice' column with -2
     ev['choice'].fillna(-2, inplace=True)
 
-    # maybe make sure to return indices? 
+    # visdiff is normalised to contrast. However sometimes it just needs to be categorised for plotting. 
+    # so that the highest contrast maps to 1 and the lowest to -1    
+    
+    def map_stim_category(value):
+        visDiff_categories = np.array([-1.0, -0.5, -0.25, 0.0, 0.25, 0.5, 1.0])
+        idx = np.argmin(np.abs(visDiff_categories - value))
+        return visDiff_categories[idx]
+    
+    ev['visDiff_categorical'] = (ev['visDiff']/ev.visDiff.max()).apply(map_stim_category)
+    ev['audDiff_categorical'] = (ev['audDiff']/ev.audDiff.max()).apply(map_stim_category) # we do this to ensire 0 is always 0 not -0 etc.
+    
+   # all of this could be replaces with pd.cut potentially ...
+
+
     return ev
 
-def load_trial_data(subject,date,load_clusters = True,load_raster = None,avg_kwargs=None):
+def load_trial_data(subject,date,load_clusters = True,load_raster = None,avg_kwargs=None,include_no_sound_trials=False):
     """function to call the a particular sessions' trials and clusters data
 
     Args:
@@ -174,19 +209,16 @@ def load_trial_data(subject,date,load_clusters = True,load_raster = None,avg_kwa
         _type_: _description_
     """    
 
-    trial_data_source = get_source_folder('trial_data')
-    cluster_data_source = get_source_folder('cluster_data')
-    raster_data_source = get_source_folder('raster_data')
-
+    data_source = get_source_folder()
     session = f'{subject}_{date}'
+    session_path = data_source / session
 
-
-    df = pd.read_csv((trial_data_source / f'{session}.csv'),low_memory=False)
+    df = pd.read_csv((session_path / f'trials.csv'),low_memory=False)
 
     
     if load_clusters:
         # deal with the cluster data
-        clusters = pd.read_csv((cluster_data_source / f'{session}.csv'),low_memory=False)
+        clusters = pd.read_csv((session_path / f'clusters.csv'),low_memory=False)
         # adding this line to create common column for merging
         clusters['neuronID'] = clusters['_av_IDs'].apply(lambda x: f'neuron_{x}')
     else: 
@@ -195,22 +227,27 @@ def load_trial_data(subject,date,load_clusters = True,load_raster = None,avg_kwa
     # deal with the spike data
 
     if load_raster is not None:
-        raster_path = raster_data_source / load_raster / f'{session}.csv'
-        rasters = pd.read_parquet(raster_path)
+        raster_path = session_path / f'raster_{load_raster}_aligned.npz'
+        rasters = np.load(raster_path,allow_pickle=True)
     else: 
         rasters = None
         
     if avg_kwargs is not None: 
         df = add_average_to_ev(df,rasters,**avg_kwargs)
 
-    df = preproc_events_data(df)
+    df = preproc_events_data(df, include_no_sound_trials=include_no_sound_trials)
 
     # ensure that the raster data has he same trial indices left as the event data
     if rasters is not None:
-        rasters = rasters[rasters['Trial'].isin(df.index)]   
+        idx = df.index.values
+        rasters = {
+            'data_binned': rasters['data_binned'][idx,:,:],
+            'tscale': rasters['tscale'],
+            'cscale': rasters['cscale']
+        }
     
     return { 
-        'ev':df,
+        'ev': df.reset_index(drop=True), # reset index so that it can be used in the rasters  data again
         'clusters':clusters,
         'rasters':rasters
     }
@@ -253,3 +290,56 @@ def prepare_for_fit(ev,fit_type = None):
 
     return ev
 
+## 
+# spiking data tools 
+
+
+# gaussian smoothing along the time axis with causal kernel (so half gaussian
+
+def smooth_raster(r, tscale, smoothing=0.025, kernel_dir='forward',baseline_subtract=False):
+    """smooth raster data along the time axis with a gaussian kernel.
+
+    Args:
+        r (np.array): raster data (trials x neurons x time)
+        tscale (np.array): time scale
+        smoothing (float, optional): smoothing in seconds. Defaults to 0.025.
+        kernel_dir (str, optional): direction of the kernel. 'forward' for causal, 'backward' for anti-causal, 'both' for non-causal. Defaults to 'forward'.
+
+    Returns:
+        np.array: smoothed raster data
+    """
+    r_smoothed = r.copy()  # No smoothing applied
+
+    if smoothing>0: 
+        w = tscale.size  
+        tbin = np.diff(tscale).mean()
+        window = gaussian(w, std=smoothing / tbin)
+
+        if kernel_dir == 'forward':
+            # half (causal) gaussian filter
+            window[: int(np.ceil(w / 2))] = 0
+        elif kernel_dir == 'backward':
+            # applied for preceding events (anti-causal)
+            window[int(np.floor(w / 2)) :] = 0
+        window /= np.sum(window)  
+
+        # Convolve along the last axis (time axis) using FFT for faster computation
+        # Expand the window to match the dimensions of `r` except for the time axis
+        window = window[(np.newaxis,) * (r.ndim - 1) + (slice(None),)]
+        
+        # pad with zeros at the beginning and end to avoid edge effects
+        pad_width = [(0, 0)] * (r.ndim - 1) + [(w // 2, w // 2)]
+        r_padded = np.pad(r, pad_width, mode="constant", constant_values=0)
+        r_smoothed = fftconvolve(r_padded, window, axes=-1, mode="same")
+        
+        # remove the padding
+        r_smoothed = r_smoothed[(slice(None),) * (r.ndim - 1) + (slice(w // 2, -w // 2),)] 
+
+        #r_smoothed = fftconvolve(r, window, axes=-1, mode="same")
+
+    if baseline_subtract:
+        baseline = r[(slice(None),) * (r.ndim - 1) + (tscale < 0,)].mean(axis=-1, keepdims=True)  # Compute baseline modularly
+        r_smoothed = r_smoothed - baseline  # Subtract baseline from smoothed data
+ 
+            
+    return r_smoothed

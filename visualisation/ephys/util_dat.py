@@ -3,7 +3,7 @@
 # e.g. reading in the results/adding the behaviural params etc.
 
 import pandas as pd
-from src.ephys.encoding_avg import fit_dataset, get_winning_model
+from src.ephys.encoding_avg.encoding_avg import fit_dataset, get_winning_model
 
 
 def add_behavioural_params(coefs):

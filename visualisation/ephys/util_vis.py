@@ -1,5 +1,5 @@
 
-from src.ephys.encoding_avg import get_predictors,get_tested_models
+from src.ephys.encoding_avg.encoding_avg import get_predictors,get_tested_models
 
 import numpy as np 
 import pandas as pd

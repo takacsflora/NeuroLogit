@@ -1,7 +1,7 @@
 
 #%%
 
-from src.ephys.encoding_avg import fit_dataset, get_winning_model, plot_prediction,filt_trials,get_time_params, get_predictors,get_tested_models
+from src.ephys.encoding_avg.encoding_avg import fit_dataset, get_winning_model, plot_prediction,filt_trials,get_time_params, get_predictors,get_tested_models
 from src.ephys.dat_utils import load_trial_data
 
 import seaborn as sns
@@ -24,7 +24,7 @@ df_stim,clusters,_ = load_trial_data(subject,date,
 
 #%%
 
-from src.ephys.cccp.run import run_combined_condition_U
+from src.ephys.cccp.stat import run_combined_condition_U
 results = run_combined_condition_U(df_choice[df_choice.rt>0.1],to_discriminate='choice')
 
 

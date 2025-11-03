@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 setup(
     name='NeuroLogit',
     version='1.0',
-    packages=find_packages(),
+    packages=find_packages(where='NeuroLogit'),
     install_requires=[
         "floras_helpers @ git+https://github.com/takacsflora/floras-helpers.git@main",
         "plotly",
@@ -24,4 +24,6 @@ setup(
         'Topic :: Scientific/Engineering :: Mathematics',
     ],
 )
+
+
 

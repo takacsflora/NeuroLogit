@@ -156,8 +156,6 @@ def get_visual_models(model_list):
 
     return [m for m in model_list if'visC' in get_predictors(m)]
 
-
-
 def get_model_gamma_combinations(**kwargs):
     # Define the gamma values for each model
     # vis and av models will have a range of gammas, while the rest will be fixed at 1
@@ -514,8 +512,7 @@ def get_winning_model(model_fits,thr_scorer='adj_r2',thr=0):
     return best_model
 
 
-#%%
-
+########## functions for plotting ##########
 def compute_means_and_errors(df):
         means = df.groupby(['visDiff', 'audDiff','task','choice'])['response'].mean().reset_index()
         errors = df.groupby(['visDiff', 'audDiff','task','choice'])['response'].sem().reset_index()

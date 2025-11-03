@@ -2,7 +2,7 @@
 
 #%%
 
-from src.ephys.encoding_avg import fit_dataset, get_winning_model, plot_prediction,filt_trials,get_time_params, get_predictors,get_tested_models
+from src.ephys.encoding_avg.encoding_avg import fit_dataset, get_winning_model, plot_prediction,filt_trials,get_time_params, get_predictors,get_tested_models
 from src.ephys.dat_utils import load_trial_data
 
 import seaborn as sns

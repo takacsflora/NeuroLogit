@@ -2,7 +2,7 @@
 
 import numpy as np
 from src.ephys.dat_utils import load_trial_data
-from src.ephys.encoding_avg import filt_trials, get_time_params
+from src.ephys.encoding_avg.encoding_avg import filt_trials, get_time_params
 
 import matplotlib.pyplot as plt 
 import seaborn as sns

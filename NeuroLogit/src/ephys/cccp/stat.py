@@ -110,12 +110,12 @@ def get_trialtypes(df,to_discriminate='choice'):
         df['trialtype'] = df.groupby(['visDiff','audDiff']).ngroup()
 
     elif to_discriminate == 'aud':
-        df = df[(~df.is_visualTrial) & (~df.is_blankTrial)].copy()
+        df = df[df.audDiff.isin([1, -1])].copy()
         df['to_discriminate'] = df['audDiff']>0
         df['trialtype'] = df.groupby(['visDiff','choice']).ngroup()
 
     elif to_discriminate == 'vis':
-        df = df[(~df.is_auditoryTrial) & (~df.is_blankTrial)].copy()
+        df = df[(df.visDiff!=0)].copy()
         df['to_discriminate'] = df['visDiff']>0
         df['trialtype'] = df.groupby(['audDiff','choice','stim_visContrast']).ngroup()
     
@@ -153,7 +153,7 @@ def get_trialtypes(df,to_discriminate='choice'):
 
     return df
 
-def run_combined_condition_U(df, to_discriminate='choice',fr_thr = 0.1,min_trials = 10, **kws):
+def run_combined_condition_U(df, to_discriminate='choice',min_trials = 10, **kws):
     """helper function to run ccCP on all neuron columns in trial data.
 
     Args:
@@ -178,14 +178,30 @@ def run_combined_condition_U(df, to_discriminate='choice',fr_thr = 0.1,min_trial
 
     # for each neuron we will compute the variance and the average fr in the tested period
     fr_mean = ccCP_df[neuron_columns].mean()
+    fr_std = ccCP_df[neuron_columns].std()
 
     # get the fr for each condition
     fr_per_condition = ccCP_df.groupby('to_discriminate')[neuron_columns].mean()
+    fr_std_per_condition = ccCP_df.groupby('to_discriminate')[neuron_columns].std()
     # subtract True - False (from what is being discriminated)
-    fr_diff = (fr_per_condition.loc[True] - fr_per_condition.loc[False])
 
-    results= pd.DataFrame({'neuronID':neuron_columns,f'p_{to_discriminate}':p,f'cp_{to_discriminate}':cp, f'fr_mean_{to_discriminate}': fr_mean, f'fr_diff_{to_discriminate}': fr_diff})
+    results= pd.DataFrame({f'p_{to_discriminate}':p,
+                            f'cp_{to_discriminate}':cp,
+                            f'fr_mean_{to_discriminate}': fr_mean, 
+                            f'fr_std_{to_discriminate}': fr_std,
+                            f'fr_Right_{to_discriminate}': fr_per_condition.loc[True], 
+                            f'fr_Left_{to_discriminate}': fr_per_condition.loc[False],
+                            f'fr_std_Right_{to_discriminate}': fr_std_per_condition.loc[True],
+                            f'fr_std_Left_{to_discriminate}': fr_std_per_condition.loc[False],
+                             })
 
     # calculate the average difference between the two options tested
     
     return results
+
+def check_cp_significance(clusters,p_thr= 0.01,std_thr=0.1,to_discriminate = 'aud'):
+    clusters[f'is_{to_discriminate}'] = (((clusters[f'p_{to_discriminate}'] < p_thr)| (clusters[f'p_{to_discriminate}'] > 1-p_thr)) & 
+                                         (clusters[f'fr_std_Right_{to_discriminate}'] > std_thr) & 
+                                         (clusters[f'fr_std_Left_{to_discriminate}'] > std_thr))
+    # potentially change the fr_mean thing to fr_std <0.3 or something 
+    return clusters

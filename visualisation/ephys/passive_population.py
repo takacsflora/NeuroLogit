@@ -86,7 +86,7 @@ plt.show()
 model_counts['subject'] = model_counts['sessionID'].str.split('_').str[0]
 plt.figure(figsize=(12, 8))
 
-from src.ephys.encoding_avg import get_predictors
+from src.ephys.encoding_avg.encoding_avg import get_predictors
 
 fig,ax = plt.subplots(1, 1, figsize=(12, 8))
 
