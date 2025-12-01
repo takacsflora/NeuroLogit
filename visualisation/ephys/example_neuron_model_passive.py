@@ -2,13 +2,13 @@
 
 #%%
 
-from src.ephys.encoding_avg.encoding_avg import fit_dataset, get_winning_model, plot_prediction,filt_trials,get_time_params, get_predictors,get_tested_models
-from src.ephys.dat_utils import load_trial_data
+from NeuroLogit.src.ephys.encoding_avg.batch_proc import fit_dataset, get_winning_model, plot_prediction,filt_trials,get_time_params, get_predictors,get_tested_models
+from NeuroLogit.src.ephys.dat_utils import load_trial_data
 
 import seaborn as sns
 import numpy as np
 import matplotlib.pyplot as plt
-from util_vis import get_component_matrix
+from NeuroLogit.src.ephys.encoding_avg.visualisation_helpers import get_component_matrix
 
 timing = {'time_window':'stim','pre_time':0.0,'post_time':0.15}
 

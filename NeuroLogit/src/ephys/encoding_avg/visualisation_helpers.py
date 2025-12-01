@@ -1,5 +1,5 @@
 
-from src.ephys.encoding_avg.encoding_avg import get_predictors,get_tested_models
+from NeuroLogit.src.ephys.encoding_avg.batch_proc import get_predictors,get_tested_models
 
 import numpy as np 
 import pandas as pd

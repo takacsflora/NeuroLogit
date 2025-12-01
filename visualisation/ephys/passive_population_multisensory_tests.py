@@ -6,7 +6,7 @@
 # Q2 is the best additive model better than the best multiplicative model?
 
 
-from util_dat import read_in_all_coefs,get_winning_model
+from NeuroLogit.src.ephys.encoding_avg.results_helpers import read_in_all_coefs,get_winning_model
 import pandas as pd
 
 coefs,models = read_in_all_coefs(fit_type='passive', subset='', recompute=False, add_behav_params=True, get_best=True)

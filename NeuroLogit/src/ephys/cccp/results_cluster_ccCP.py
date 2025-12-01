@@ -7,8 +7,8 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 import seaborn as sns
 
-from src.ephys.cccp.results_helpers import add_ipsi_contra
-from src.ephys.results_utils import read_files 
+from NeuroLogit.src.ephys.cccp.results_helpers import add_ipsi_contra
+from NeuroLogit.src.ephys.results_utils import read_files 
 from floras_helpers.plotting import off_axes
 # %
 

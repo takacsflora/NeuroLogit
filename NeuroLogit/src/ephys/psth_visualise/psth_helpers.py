@@ -1,7 +1,7 @@
 #%%
 import numpy as np
 
-import src.ephys.results_utils  as hP 
+import NeuroLogit.src.ephys.results_utils  as hP 
 
 
 import matplotlib.pyplot as plt
@@ -24,18 +24,18 @@ def read_all_psths(triggered_at='stim',vis_conds=[-1,0,1],aud_conds=[-1,0,1],odd
         }
     # read in all the psths for the conditions
 
-    means = {c: hP.read_files(psth_dat_type='mean',psth_condition=c,**read_file_kws) for c in conds}
-    sems = {c: hP.read_files(psth_dat_type='sem',psth_condition=c,**read_file_kws) for c in conds}
-    tscale = hP.read_files(psth_dat_type='tscale',psth_condition=None,**read_file_kws)
+    means = {c: hP.read_files(npz_dat_type='mean',psth_condition=c,**read_file_kws) for c in conds}
+    sems = {c: hP.read_files(npz_dat_type='sem',psth_condition=c,**read_file_kws) for c in conds}
+    tscale = hP.read_files(npz_dat_type='tscale',psth_condition=None,**read_file_kws)
 
     # need to be optionally swapping to ipsi and contra
     # basically to swap psths we would need to loop over the hemispheres and if the hemisphere is right we would need to take the psth from the opposite side 
     # so for example (-1,-1,'left') is left stimulus, left stimulus, left choice, so ipsi for left hemisphere but contra for right hemisphere # so a swap would mean 
     if swap_to_ipsi_contra:
-        hemis = hP.read_files(psth_dat_type='hemis',psth_condition=None,**read_file_kws)
+        hemis = hP.read_files(npz_dat_type='hemis',psth_condition=None,**read_file_kws)
 
         if 'odds' not in triggered_at:
-            reverse_conds = [(-v, -a, 'right' if c == 'left' else 'left' if c == 'right' else c) for v, a, c in conds]
+            reverse_conds = [(-v, -a if a!='no_sound' else a, 'right' if c == 'left' else 'left' if c == 'right' else c) for v, a, c in conds]
             new_keys = [(v, a, 'ipsi' if c == 'left' else 'contra' if c == 'right' else c) for v, a, c in conds] # changing the choice names
         else:
             reverse_conds = [(-o, 'right' if c == 'left' else 'left' if c == 'right' else c) for o, c in conds]

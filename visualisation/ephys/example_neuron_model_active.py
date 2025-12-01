@@ -8,7 +8,7 @@ from src.ephys.dat_utils import load_trial_data
 import seaborn as sns
 import numpy as np
 import matplotlib.pyplot as plt
-from util_vis import get_component_matrix
+from NeuroLogit.src.ephys.encoding_avg.visualisation_helpers import get_component_matrix
 
 timing = {'time_window':'stim_bin','pre_time':0.15,'post_time':0.0}
 

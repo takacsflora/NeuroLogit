@@ -5,8 +5,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 
-from src.ephys.dat_utils import load_trial_data,get_ephys_dataset
-from src.models.av_models_multi import av_multi_symmetric_audio
+from NeuroLogit.src.ephys.dat_utils import load_trial_data,get_ephys_dataset
+from NeuroLogit.src.models.av_models_multi import av_multi_symmetric_audio
 
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
@@ -108,6 +108,7 @@ def get_tested_models(fit_type = 'passive'):
             'baseline',
 
         ]
+
     elif fit_type == 'active_choice':
         models = [
             'baseline',
@@ -204,9 +205,15 @@ def get_predictor_matrix(df,hemi=1):
     #X['choice'] = (X.choice>0).astype('int')
     X['task'] = (df.session=='active').astype('int')
 
-    X['whisker'] = df['movement']
+    # in the current df I don't use this...
+   # X['whisker'] = df['movement']
 
     X['Vpres'] = (df.visDiff!=0).astype('int')
+
+    #X['Apres'] = (df.stim_audAmplitude!=0).astype('int')
+
+
+
     # congruent non-linearity. Scales the same way as v as aud does not have an intermediate value in practice 
     # !!! can't fit this way if aud is not only 1 or 0!
 
@@ -454,50 +461,34 @@ def fit_dataset(fit_type='passive',
         time_kwargs (dict, optional): _description_. Defaults to {'time_window':'stim','pre_time':0.0,'post_time':0.15}.
     """
     
-    savepath = Path(r'D:\AV_Neural_Data\fit_results\linear_fit_results')
-    subfolder = f"{fit_type}_{dataset_kwargs['set_name']}_{time_kwargs['time_window']}_pre{time_kwargs['pre_time']}_post{time_kwargs['post_time']}"
-    savepath = savepath / subfolder
-    savepath.mkdir(parents=True, exist_ok=True)
+    savepath = Path(r'D:\AV_Neural_Data_Sept2025\encoding_avg_results')
+    
+    fit_stub = f"{fit_type}_{dataset_kwargs['set_name']}_{time_kwargs['time_window']}_pre{time_kwargs['pre_time']}_post{time_kwargs['post_time']}"
 
     sessions = get_ephys_dataset(**dataset_kwargs)
     time_params = get_time_params(**time_kwargs)
-    coefs = []
     for _,args in sessions[['subject','date']].iterrows():
             
-            stub = f"{args['subject']}_{args['date']}.csv"
+            session_stub = f"{args['subject']}_{args['date']}"
+            session_path = savepath / session_stub
+            session_path.mkdir(parents=True, exist_ok=True)
 
-            savefile = savepath / stub
+            savefile = session_path / f"{fit_stub}.csv"
 
             if (not savefile.exists()) or recompute:
-                print(f"Fitting {args['subject']} {args['date']} with fit_type {fit_type}...")
-                df,clusters,_  = load_trial_data(**args,**time_params).values()
-
-
-
-                if df is not None:
+                
+                try:
+                    print(f"Fitting {args['subject']} {args['date']} with fit_type {fit_type}...")
+                    df,clusters,_  = load_trial_data(**args,**time_params,include_no_sound_trials=False).values()
                     ## to rewrite this so that we allow multiple tested model sets
                     tested_df = filt_trials(df,fit_type=fit_type)
-
-                    if tested_df.size>0:
-                        model_fits = fit_session(tested_df,clusters,fit_type=fit_type)
-                        model_fits['subject'] = args['subject']
-                        model_fits['date'] = args['date']
-                        model_fits.to_csv(savefile, index=False)
-                    else:
-                        model_fits=None
-            
-            else:
-                model_fits = pd.read_csv(savefile, low_memory=False)
-            
-            
-            coefs.append(model_fits)
-
-
-    # create a new column that is fitID, and its is a string of subject date and neuronID
-    coefs = pd.concat(coefs)
-    coefs['fitID'] = coefs['subject'] + '_' + coefs['date'] + '_' + coefs['neuronID']
-
-    return coefs.reset_index(drop=True)
+                    model_fits = fit_session(tested_df,clusters,fit_type=fit_type)
+                    model_fits['subject'] = args['subject']
+                    model_fits['date'] = args['date']
+                    model_fits['fitID'] = model_fits['subject'] + '_' + model_fits['date'] + '_' + model_fits['neuronID']
+                    model_fits.to_csv(savefile, index=False)
+                except Exception as e:
+                    print(f"Error fitting {args['subject']} {args['date']}: {e}")
 
 def get_winning_model(model_fits,thr_scorer='adj_r2',thr=0):
     model_fits = model_fits.reset_index(drop=True)
@@ -510,6 +501,8 @@ def get_winning_model(model_fits,thr_scorer='adj_r2',thr=0):
         if row[thr_scorer] < thr else row, axis=1
     ).copy()
     return best_model
+
+
 
 
 ########## functions for plotting ##########
@@ -654,4 +647,12 @@ def plot_prediction(df,nrn_model,plot_gamma_transformed_v=True,axes=None):
 
     # Add legend and adjust layout
     handles, labels = ax.get_legend_handles_labels()
+    
+
+if __name__ == "__main__":
+    coefs = fit_dataset(fit_type='passive',
+        dataset_kwargs={'set_name':'all'},
+        time_kwargs={'time_window':'prestim','pre_time':0.0,'post_time':0.15},
+        recompute=False
+        )
     

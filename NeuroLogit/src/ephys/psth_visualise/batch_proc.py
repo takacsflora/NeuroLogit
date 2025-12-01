@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 
-from src.ephys.dat_utils import load_trial_data,smooth_raster,get_ephys_dataset
+from NeuroLogit.src.ephys.dat_utils import load_trial_data,smooth_raster,get_ephys_dataset
 
 PSTH_SAVE_PATH = Path(r'D:\AV_Neural_Data_Sept2025\psth_visualisations')
 
@@ -42,6 +42,9 @@ def get_psths_by_conditions(df,rasters,baseline_raster,groupby=['visDiff', 'audD
     Returns:
         dict: dictionary with keys as (visDiff,audDiff,choice) and values as the mean raster for that condition
     """
+
+
+
     grouped_indices = df.groupby(groupby).indices
     
     r = rasters['data_binned']
@@ -122,10 +125,14 @@ def save_session_psths(subject,date,session_path):
     """
         
     ev,clusters,rasters_stim = load_trial_data(subject,date,
-                                load_clusters=True,load_raster='prestim').values()
+                                load_clusters=True,load_raster='prestim',include_no_sound_trials=True).values()
 
     _,_,rasters_move = load_trial_data(subject,date,
-                                load_clusters=False,load_raster='choice').values()
+                                load_clusters=False,load_raster='choice',include_no_sound_trials=True).values()
+    
+
+    # if stimAudAmplitude contains 0 then rewrite its audDiff_categorical value to -100 (no sound)
+    ev.loc[ev.stim_audAmplitude==0,'audDiff_categorical'] = 'no_sound'
 
 
     cluster_hemispheres = clusters.hemi.values
@@ -194,4 +201,4 @@ def run_all_sessions(recompute=False):
             continue
 
 if __name__ == '__main__':
-    run_all_sessions(recompute=False)
+    run_all_sessions(recompute=True)

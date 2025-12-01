@@ -1,6 +1,6 @@
 #%%
 
-from util_dat import read_in_all_coefs,get_common_cols
+from NeuroLogit.src.ephys.encoding_avg.results_helpers import read_in_all_coefs,get_common_cols
 import pandas as pd
 
 import matplotlib.pyplot as plt

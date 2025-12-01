@@ -7,7 +7,7 @@ from src.ephys.dat_utils import load_trial_data
 import seaborn as sns
 import numpy as np
 import matplotlib.pyplot as plt
-from util_vis import get_component_matrix
+from NeuroLogit.src.ephys.encoding_avg.visualisation_helpers import get_component_matrix
 
 
 fit_type = 'active_choice'

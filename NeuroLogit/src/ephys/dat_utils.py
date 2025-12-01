@@ -135,7 +135,8 @@ def preproc_events_data(ev, include_no_sound_trials = False):
 
     ev = ev[(ev.is_validTrial) &
                 (~isnogo_block) & 
-                (ev.stim_audAzimuth.isin([np.nan,-60,0,60]))   # in some later mice we have 30 degrees but I don't analyse those
+                (ev.stim_audAzimuth.isin([np.nan,-60,0,60])) &   # in some later mice we have 30 degrees but I don't analyse those
+                (ev.stim_visAzimuth.isin([np.nan,-60,60]))
                 ].copy()
     
     if not include_no_sound_trials:
@@ -296,7 +297,7 @@ def prepare_for_fit(ev,fit_type = None):
 
 # gaussian smoothing along the time axis with causal kernel (so half gaussian
 
-def smooth_raster(r, tscale, smoothing=0.025, kernel_dir='forward',baseline_subtract=False):
+def smooth_raster(r, tscale, smoothing=0.025, kernel_dir='forward',baseline_subtract=None,zscore = False):
     """smooth raster data along the time axis with a gaussian kernel.
 
     Args:
@@ -304,6 +305,8 @@ def smooth_raster(r, tscale, smoothing=0.025, kernel_dir='forward',baseline_subt
         tscale (np.array): time scale
         smoothing (float, optional): smoothing in seconds. Defaults to 0.025.
         kernel_dir (str, optional): direction of the kernel. 'forward' for causal, 'backward' for anti-causal, 'both' for non-causal. Defaults to 'forward'.
+        baseline_subtract (str or None, optional): whether to subtract the baseline. and if so, how. options:'per_trial','all_trials' or None. 
+        zscore (bool, optional): whether to zscore the data after baseline subtraction. Defaults to False. (only if baseline_subtract is 'all_trials')
 
     Returns:
         np.array: smoothed raster data
@@ -332,14 +335,24 @@ def smooth_raster(r, tscale, smoothing=0.025, kernel_dir='forward',baseline_subt
         r_padded = np.pad(r, pad_width, mode="constant", constant_values=0)
         r_smoothed = fftconvolve(r_padded, window, axes=-1, mode="same")
         
-        # remove the padding
-        r_smoothed = r_smoothed[(slice(None),) * (r.ndim - 1) + (slice(w // 2, -w // 2),)] 
+        # remove the padding       
+        r_smoothed = r_smoothed[(slice(None),) * (r.ndim - 1) + (slice((w // 2), -(w // 2)),)] 
 
+        assert r_smoothed.shape == r.shape, "Smoothed data shape mismatch after padding removal."
         #r_smoothed = fftconvolve(r, window, axes=-1, mode="same")
 
-    if baseline_subtract:
-        baseline = r[(slice(None),) * (r.ndim - 1) + (tscale < 0,)].mean(axis=-1, keepdims=True)  # Compute baseline modularly
-        r_smoothed = r_smoothed - baseline  # Subtract baseline from smoothed data
+    if baseline_subtract is not None:
+        if baseline_subtract == 'per_trial':
+        
+            baseline = r[(slice(None),) * (r.ndim - 1) + (tscale < 0,)].mean(axis=-1, keepdims=True)  # Compute baseline modularly
+            r_smoothed = r_smoothed - baseline  # Subtract baseline from smoothed data
+
+        elif baseline_subtract == 'all_trials':
+            baseline = np.nanmean(r[(slice(None),) * (r.ndim - 1) + (tscale < 0,)],axis=(0, -1), keepdims=True)  # Compute overall baseline
+            r_smoothed = r_smoothed - baseline  # Subtract baseline from smoothed data
  
+            if zscore:
+                baseline_std = np.nanstd(r[(slice(None),) * (r.ndim - 1) + (tscale < 0,)],axis=(0, -1), keepdims=True) 
+                r_smoothed = (r_smoothed - baseline) / baseline_std
             
     return r_smoothed
