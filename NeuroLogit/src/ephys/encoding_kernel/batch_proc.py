@@ -323,6 +323,10 @@ def get_psths_per_cond_(df,raster,raster_tscale,groupby=['visDiff_categorical','
     
     return fr_mean,fr_sem
 
+
+
+
+
 def fit_all_models_per_session(subject,date,model_IDs = ['passive_RR10']):
     print(f"Fitting session: {subject}_{date} ...")
     ev,clusters,rasters_stim = load_trial_data(subject,date,

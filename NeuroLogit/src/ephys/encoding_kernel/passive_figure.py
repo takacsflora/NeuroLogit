@@ -14,16 +14,24 @@ from scipy.stats import pearsonr
 
 SAVE_PATH = Path(r'C:\Users\Flora\OneDrive - University College London\Cortexlab\papers\SCpaper_v2025Dec\raw plots\Passive')
 
-plt.rcParams.update({'font.size': 6,'font.family':'Calibri','axes.linewidth':0.2,'axes.spines.top':False,'axes.spines.right':False,
+plt.rcParams.update({'font.size': 7,'font.family':'Calibri','axes.linewidth':0.2,'axes.spines.top':False,'axes.spines.right':False,
                      'axes.spines.left':True,'axes.spines.bottom':True,
                      'xtick.direction':'out','ytick.direction':'out','xtick.major.size':2,'ytick.major.size':2})
+
+
+# SAVE_PATH = Path(r'C:\Users\Flora\OneDrive - University College London\Cortexlab\conferences\Cosyne2026\Poster figures')
+
+# plt.rcParams.update({'font.size': 24,'font.family':'Calibri','axes.linewidth':1,'axes.spines.top':False,'axes.spines.right':False,
+#                      'axes.spines.left':True,'axes.spines.bottom':True,
+#                      'xtick.direction':'out','ytick.direction':'out','xtick.major.size':3,'ytick.major.size':3})
+
 
 #%% load results
 
 trig_kws = {
     'vis_conds': [-1,-0.5,-0.25,0,0.25,0.5,1],
     'aud_conds': ['no_sound',-1,0,1],
-    'choice_conds': ['passive','ipsi','contra'],
+    'choice_conds': ['passive','ipsi','contra','NoGo'],
 } 
 
 results = read_all_results(model_type='passive_active_Ridge10', 
@@ -41,6 +49,25 @@ sel_clusters = clusters[
 
 SC_neuron_inds = sel_clusters.index.values
 
+# %%  get the percentages of the things I mention in the text: 
+
+percentage_r2_tot = (sel_clusters['r2_tot'] > 10e-3).mean() * 100
+print(f"Percentage of sel_clusters where r2_tot > 10e-3: {percentage_r2_tot:.2f}%")
+
+# Calculate the percentage of neurons for each functional type
+percentages = sel_clusters['functional_type'].value_counts(normalize=True) * 100
+
+print(percentages)
+
+vis_neurons = sel_clusters[sel_clusters['is_visual']]
+percentage_positive_amp_visual = (vis_neurons['amp_visual'] > 0).mean() * 100
+print(f"Percentage of visual neurons where amp_visual > 0: {percentage_positive_amp_visual:.2f}%")
+
+
+aud_neurons = sel_clusters[sel_clusters['is_auditory']]
+percentage_positive_amp_auditory = (aud_neurons['amp_auditory'] > 0).mean() * 100
+print(f"Percentage of auditory neurons where amp_auditory > 0: {percentage_positive_amp_auditory:.2f}%")
+
 #%% sort neurons by SC pos and then within each SC pos sort by depth
 sel_clusters['clus_index'] = np.arange(len(sel_clusters))
 sel_clusters['SC_pos'] = pd.Categorical(sel_clusters['SC_pos'], categories=['SCd','SCiw','SCig','SCs'], ordered=True)
@@ -52,11 +79,11 @@ isort = sel_clusters_sorted['clus_index'].values
 
 #  plot the acutal and the predicted means and then the indivisual neurons
 
-example_neurons = [24,175,330,540]
+example_neurons = []
 
 
 audstim = [1,0,-1,'no_sound']
-visstim = trig_kws['vis_conds']
+visstim = [-1, -0.5, 0, 0.5, 1]# trig_kws['vis_conds']
 
 time_period = (-0.1,.46) # time period to average over
 t_idx = (results['response_tscale'] >= time_period[0]) & (results['response_tscale'] < time_period[1])
@@ -67,16 +94,22 @@ n_aud = len(audstim)
 n_vis = len(visstim)
 n_neurons = len(SC_neuron_inds)
 
-fig, axs = plt.subplots(n_aud,n_vis,sharex=True,sharey=True,figsize=(5,4))
-fig.subplots_adjust(wspace=0.0,hspace=0.2)
-# Set transparent background for the figure
-fig.patch.set_alpha(0.0)
+# main figure figsize 
+#fig, axs = plt.subplots(n_aud,n_vis,sharex=True,sharey=True,figsize=(5,4))
 
+# supplement al figure figsize
+fig, axs = plt.subplots(n_aud,n_vis,sharex=True,sharey=True,figsize=(8,8))
+
+fig.subplots_adjust(wspace=0.0,hspace=0.2)
+# Set transparent background for the figure#
+#fig.patch.set_alpha(0.0)
+
+resp_type = 'passive'
 extent = [tscale_t[0], tscale_t[-1],  n_neurons, 0]
 for i,aud in enumerate(audstim):
     for j,vis in enumerate(visstim):
         ax=axs[n_aud-i-1,j]
-        resp = results['actual_mean'][(vis,aud,'contra')][psth_idx]#-blank_psth
+        resp = results['actual_mean'][(vis,aud,resp_type)][psth_idx]#-blank_psth
         ax.imshow(resp,aspect='auto',cmap='bwr',vmin=-1,vmax=1,extent=extent)
 
 
@@ -92,7 +125,7 @@ for i,aud in enumerate(audstim):
         # add a hline at the border each SC pos 
         for border in sel_clusters_sorted.groupby('SC_pos').size().cumsum():
             if border < n_neurons:
-                ax.axhline(border, color='k',linestyle=':', lw=0.5)
+                ax.axhline(border, color='k',linestyle=':', lw=1)
 
         # Add arrows at the rows of example neurons
         if j==n_vis-1:
@@ -115,16 +148,16 @@ norm = plt.Normalize(vmin=-1, vmax=1)
 sm = plt.cm.ScalarMappable(cmap='bwr', norm=norm)
 sm.set_array([])
 cbar = fig.colorbar(sm, cax=cbar_ax)
-cbar.ax.tick_params(labelsize=8)
-cbar.set_label('Response (z-score)', fontsize=8)
+cbar.ax.tick_params()
+cbar.set_label('Response (z-score)')
 
 
 # Adjust the x-axis limits of the first column to accommodate the boxes
 axs[0, 0].set_xlim([time_period[0], time_period[1]+0.05])
 
 
-fig.savefig(SAVE_PATH / 'passive_responses_depth_sorted.svg', dpi=300)
-
+#fig.savefig(SAVE_PATH / f'{resp_type}_responses_depth_sorted.svg', dpi=300)
+fig.savefig(SAVE_PATH / f'{resp_type}_responses_depth_sorted_with_scales.png', dpi=400)
 
 # %% plot the kernels
 kernels = results['kernel_dict']
@@ -135,7 +168,7 @@ task_kernels = ['choice_ipsi','choice_contra','task']
 
 plotted_kernels = sensory_kernels + task_kernels
 
-kernel_names = ['Visual \n 0.25','Visual \n 0.5','Visual \n 1.0',
+kernel_names = ['Visual \n low','Visual \n mid','Visual \n high',
                 'Auditory \n onset','Auditory \n ipsi','Auditory \n contra','Action \n ipsi','Action \n contra','Task']
 # get the sizes of each kernels tscale
 
@@ -143,7 +176,10 @@ kernel_names = ['Visual \n 0.25','Visual \n 0.5','Visual \n 1.0',
 tscale_sizes = {k: len(kernels[k]['tscale']) for k in plotted_kernels}
 #plotted_kernels = ['vis_contra_0.5','vis_contra_1.0','aud_onset','aud_ipsi','aud_contra']
 n_kernels = len(plotted_kernels)
-fig,axs = plt.subplots(1,n_kernels,figsize=(n_kernels/2,1),dpi=150,sharex=False,sharey=True,gridspec_kw={'width_ratios':list(tscale_sizes.values())})
+# fig,axs = plt.subplots(1,n_kernels,figsize=(n_kernels/2,1),dpi=150,
+#                        sharex=False,sharey=True,gridspec_kw={'width_ratios':list(tscale_sizes.values())})
+fig,axs = plt.subplots(1,n_kernels,figsize=(n_kernels,2),dpi=150,
+                       sharex=False,sharey=True,gridspec_kw={'width_ratios':list(tscale_sizes.values())})
 #fig.subplots_adjust(wspace=-20, hspace=-20.5)
 
 for i,k in enumerate(plotted_kernels):
@@ -168,7 +204,7 @@ for i,k in enumerate(plotted_kernels):
         ax.axvline(0, color='k', lw=0.5)
     
 plt.tight_layout()
-fig.savefig(SAVE_PATH / 'passive_kernels_depth_sorted.svg', dpi=300)
+#fig.savefig(SAVE_PATH / 'passive_kernels_depth_sorted.svg', dpi=300)
 
 
 
@@ -181,10 +217,11 @@ region_counts = sel_clusters.groupby('SC_pos').size()
 
 #d_strings = ['vis_spatial','aud_spatial','aud_onset']
 
-d_strings = ['visual','auditory','AV','choice','task']
+d_strings = ['visual','auditory','task','choice']
 
 n_plots = len(d_strings)
-fig,axs = plt.subplots(1,n_plots,figsize=(n_plots*.5, 1.2),sharey=True,sharex=True,dpi=150)
+#fig,axs = plt.subplots(1,n_plots,figsize=(n_plots*.5, 1.2),sharey=True,sharex=True,dpi=150)
+fig,axs = plt.subplots(1,n_plots,figsize=(n_plots*1.3, 3),sharey=True,sharex=True,dpi=150)
 fig.subplots_adjust(wspace=0.7)
 for ax,d_string in zip(axs.flatten(),d_strings):    
     counts = sel_clusters[sel_clusters[f'is_{d_string}']].groupby('SC_pos').size()
@@ -193,16 +230,18 @@ for ax,d_string in zip(axs.flatten(),d_strings):
 
     # Plot the fractions
     frac.plot(kind='barh', color="#A7A5A596", ax=ax)
-    ax.set_xlabel('% neurons')
+    
+    #ax.set_xlabel('% nrns')
     ax.axvline(5, color='k', linestyle=':',alpha=1,linewidth=0.6)
     off_axes(ax, which='top')
-    ax.set_title(d_string)
+    #ax.set_title(d_string)
 plt.tight_layout()
-fig.savefig(SAVE_PATH / 'passive_fraction_significant_neurons_per_SCpos.svg', dpi=300)
+#fig.savefig(SAVE_PATH / 'passive_fraction_significant_neurons_per_SCpos.svg', dpi=300)
+fig.savefig(SAVE_PATH / 'passive_fraction_significant_neurons_per_SCpos_with_scales.png', dpi=300)
 
 #%% anatomy plot 
 
-d_strings = ['visual','auditory','AV','choice','task']
+d_strings = ['visual','auditory','task','choice']
 
 n_plots = len(d_strings) + 1
 
@@ -210,7 +249,9 @@ n_plots = len(d_strings) + 1
 coord = 850
 
 anat = anatomy_plotter()
-fig,axs = plt.subplots(1,n_plots,figsize=(n_plots*1, 1.3),dpi=300,sharex=True,sharey=True)
+#fig,axs = plt.subplots(1,n_plots,figsize=(n_plots*1, 1.3),dpi=300,sharex=True,sharey=True)
+
+fig,axs = plt.subplots(1,n_plots,figsize=(n_plots*2.7, 3.5),dpi=300,sharex=True,sharey=True)
 fig.subplots_adjust(wspace=0.1, hspace=0.1)
 sel_nrns = clusters[
     (clusters.bombcell_class=='good') &
@@ -230,8 +271,8 @@ for i,type in enumerate(d_strings):
     anat.plot_points(significants['ap_gauss'],significants['dv'],unilateral=True, 
                      c=significants[f'amp_{type}'],
                         alpha=0.85,marker = '.',
-                        s=np.sqrt(significants[f'VE_{type}'])*150,edgecolor='k',
-                        linewidth=0.25,cmap = 'coolwarm',vmin=-1,vmax=1)
+                        s=np.sqrt(significants[f'VE_{type}'])*600,edgecolor='k',
+                        linewidth=0.75,cmap = 'coolwarm',vmin=-1,vmax=1)
 
     # anat.plot_points(significants['ap_gauss'],significants['dv'],unilateral=True, 
     #                  c='red',
@@ -251,8 +292,8 @@ ypos = np.linspace(2500,1200,len(sizes))
 anat.plot_points(xpos,ypos,unilateral=True, 
                  c='grey',
                  alpha=0.85,marker = '.',
-                 s=np.sqrt(sizes)*150,edgecolor='k',
-                 linewidth=0.25)
+                 s=np.sqrt(sizes)*600,edgecolor='k',
+                 linewidth=0.75)
 
 
 # ax.set_xlim([-2200, 0])
@@ -261,7 +302,7 @@ ax.set_ylim([-3000, -500])
 #off_axes(ax)
 
 ax.set_xticks([-3000,-4000])
-ax.set_xticklabels(['-3 mm','-4 mm'])
+ax.set_xticklabels(['-3 mm  ','-4 mm'])
 
 ax.set_yticks([-1000,-2000])
 ax.set_yticklabels(['-1 mm','-2 mm'])
@@ -275,8 +316,8 @@ sm.set_array([])
 cbar = fig.colorbar(sm, cax=cbar_ax)
 
 
-fig.savefig(SAVE_PATH / 'passive_significant_neuron_locations.svg', dpi=300)
-
+fig.savefig(SAVE_PATH / 'passive_significant_neuron_locations.svg', dpi=150)
+#fig.savefig(SAVE_PATH / 'passive_significant_neuron_locations_with_scales.png', dpi=400)
 
 # %% variance explained per kernel 
 
@@ -291,37 +332,40 @@ nrns_in_region = clusters[
 ]
 
 # plot passive visaud
-on_x = ['aud_spatial','aud_onset']
-y = 'vis_spatial'
+# on_x = ['aud_total','task','choice']
+# y = 'vis_spatial'
 
 # plot passve aud onset vs spaital 
 
-on_x = ['aud_spatial']
-y = 'aud_onset'
+# on_x = ['aud_spatial','vis_spatial']
+# y = 'aud_onset'
 
 # # active task vs sensory
-# on_x = ['vis_spatial','aud_total']
-# y = 'choice'
+on_x = ['aud_total','task']
+y = 'choice'
 
+# on_x = ['choice_contra','choice_ipsi']
+# y = 'choice_contra'
 
 n_plots = len(on_x)
-fig,axs = plt.subplots(1,n_plots,figsize=(n_plots*1,1.1),dpi=150,sharex=True,sharey=True)
-fig.subplots_adjust(wspace=0.2, hspace=0.1)
+#fig,axs = plt.subplots(1,n_plots,figsize=(n_plots*1,1.1),dpi=150,sharex=True,sharey=True)
+fig,axs = plt.subplots(1,n_plots,figsize=(n_plots*2.8,3.3),dpi=150,sharex=True,sharey=True)
+fig.subplots_adjust(wspace=0.05, hspace=0.1)
 for i,x in enumerate(on_x):
     if n_plots==1:
         ax=axs
     else:
         ax = axs[i]
 
-    sns.scatterplot(data=nrns_in_region, x=f'VE_{x}', y=f'VE_{y}',s=5,
+    sns.scatterplot(data=nrns_in_region, x=f'VE_{x}', y=f'VE_{y}',s=15,
                     color='#A7A5A596',
-                    edgecolor='k',linewidth=0.3,alpha=0.5, ax=ax)
+                    edgecolor='k',linewidth=0.7,alpha=0.7, ax=ax)
     
-    significant_AV = nrns_in_region[
-        (nrns_in_region['is_AV'])]
-    sns.scatterplot(data=significant_AV, x=f'VE_{x}', y=f'VE_{y}',s=5,
-                    color='red',
-                    edgecolor='k',linewidth=0.3,alpha=0.8, ax=ax)
+    # significant_AV = nrns_in_region[
+    #     (nrns_in_region['is_AV'])]
+    # sns.scatterplot(data=significant_AV, x=f'VE_{x}', y=f'VE_{y}',s=15,
+    #                 color='red',
+    #                 edgecolor='k',linewidth=0.3,alpha=0.8, ax=ax)
 
     # sns.histplot(data=sel_nrns, x='VE_vis_spatial', y='VE_aud_spatial',bins=np.arange(0,1,0.05),cmap='viridis',ax=ax)
 
@@ -334,8 +378,8 @@ for i,x in enumerate(on_x):
     ax.set_yscale('symlog', linthresh=0.01)
     ax.set_xticks([0,0.01,0.1,1])
     ax.set_yticks([0,0.01,0.1,1])
-    ax.axhline(0,color='k',linestyle=':',linewidth=0.5)
-    ax.axvline(0,color='k',linestyle=':',linewidth=0.5)
+    ax.axhline(0,color='k',linestyle=':',linewidth=1)
+    ax.axvline(0,color='k',linestyle=':',linewidth=1)
 
     ax.set_xticklabels(['0','.01','0.1','1'])
     ax.set_yticklabels(['0','.01','0.1','1'])
@@ -349,11 +393,18 @@ for i,x in enumerate(on_x):
 
 off_axes(ax,which='top')
 
+axs[0].set_ylabel('Choice')
+axs[0].set_xlabel('Auditory')
+axs[1].set_xlabel('Task')
 
+# axs[0].set_ylabel('Visual')
+# axs[0].set_xlabel('Auditory')
+# axs[1].set_xlabel('Task')
+# axs[2].set_xlabel('Action')
 
 plt.tight_layout()
-fig.savefig(SAVE_PATH / f'passive_variance_explained_scatter_{region}_{y}_vs_{on_x[0]}.svg', dpi=300)
-
+#fig.savefig(SAVE_PATH / f'passive_variance_explained_scatter_{region}_{y}_vs_{on_x[0]}.svg', dpi=150)
+fig.savefig(SAVE_PATH / f'passive_variance_explained_scatter_{region}_{y}_vs_{on_x[0]}_with_scales.png', dpi=300)
 
 
 # %%  example neurons PSTHs with model predictions

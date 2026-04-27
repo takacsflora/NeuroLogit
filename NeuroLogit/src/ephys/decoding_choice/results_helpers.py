@@ -6,88 +6,53 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from floras_helpers.plotting import off_axes
 
-from sklearn.metrics import log_loss, roc_auc_score
 
-def get_scores(task_ev,models= ['l1_0.1','l1_0.05','pca_10','behav']):
-    """
-    Computes the scores (logLoss and AUC) for each model in `models` on both training and test sets,
-    both the total scores and scores grouped by stimulus odds category.
-    Might need to input per session data if some models didn't dit as atm if there is any nan in the probabilities it will skip the whole model
-    """
-
-    scores = []
-    models_to_evaluate = list(models)
+def format_scores(metrics):
     
-    tot_col_to_groupby = ['is_test_set','sessionID','subject','date','roi_fitted']
-    for model_name in models_to_evaluate:
+    """"
+    Format the metrics dataframe by calculating delta logLoss relative to stim model"""
+    # calculate the delta logLoss on  the test set by subtracting the stim model logLoss
 
-        probabilities = f'proba_right_{model_name}'
-        pred_choices = f'predicted_choice_{model_name}'
-
-        if task_ev[probabilities].isna().any():
-            print(f"Skipping model {model_name} for session {task_ev.sessionID.unique()} due to all NaN probabilities. Model probably didn't fit.")
-            continue
-
-        grouped_scores = task_ev.groupby(['logOdds_stim_category'] +tot_col_to_groupby).apply(
-                lambda group: pd.Series({
-                    'log_loss': log_loss(group['choice'], group[probabilities],normalize=True) if len(group['choice'].unique()) > 1 else np.nan,
-                    'auc': roc_auc_score(group['choice'], group[pred_choices]) if len(group['choice'].unique()) > 1 else np.nan
-                })).unstack('is_test_set')
-
-        grouped_scores.columns = [f"{col}_{'train' if idx == 0 else 'test'}" for col, idx in grouped_scores.columns]
-        grouped_scores = grouped_scores.reset_index()
+    delta_metrics_to_compute = ['log_loss_test','auc_roc_R_vs_L_test','auc_roc_NoGo_vs_rest_test',
+                                'auc_roc_R_vs_Nogo_test','auc_roc_L_vs_Nogo_test',
+                                'log_loss_detect_test','log_loss_discrim_test']
+    
+    identifiers = ['sessionID','roi_fitted','stub']
 
 
-        total_score = task_ev.groupby(tot_col_to_groupby).apply(
-                lambda group: pd.Series({
-                    'log_loss': log_loss(group['choice'], group[probabilities],normalize=True) if len(group['choice'].unique()) > 1 else np.nan,
-                    'auc': roc_auc_score(group['choice'], group[pred_choices]) if len(group['choice'].unique()) > 1 else np.nan
-                })).unstack('is_test_set')
-        total_score.columns = [f"{col}_{'train' if idx == 0 else 'test'}" for col, idx in total_score.columns]
-        total_score = total_score.reset_index()
-        total_score['logOdds_stim_category'] = 'all'
-        grouped_scores = pd.concat([grouped_scores,total_score],ignore_index=True)
-        grouped_scores['model'] = model_name
-        scores.append(grouped_scores)
+    stim_metrics = metrics[metrics.model=='stim'][identifiers + delta_metrics_to_compute]
+    stim_metrics = stim_metrics.rename(columns={col:f'stim_{col}' for col in delta_metrics_to_compute})
 
-    scores = pd.concat(scores)
+    bias_only_metrics = metrics[metrics.model=='bias_only'][identifiers + delta_metrics_to_compute]
+    bias_only_metrics = bias_only_metrics.rename(columns={col:f'bias_only_{col}' for col in delta_metrics_to_compute})
 
-    return scores
+    metrics = metrics.merge(stim_metrics, on=['sessionID','roi_fitted','stub'], how='left')
+    metrics = metrics.merge(bias_only_metrics, on=['sessionID','roi_fitted','stub'], how='left')  
 
-def plot_logOdds_comparison(task_ev,model_name = 'pca_10',ax=None):
-    """
-    compares the odds of the behavioural model with the neural models
-    """
-    if ax is None:
-        fig,ax = plt.subplots(1,1,figsize=(2,2),dpi=150,sharex=False,sharey=False)
+    
 
-    sns.scatterplot(data =task_ev, x='logOdds_stim',y='logOdds_'+model_name,hue='choice',alpha=0.5,s=3,
-                    edgecolor='k',palette={0:'blue',1:'red'},ax=ax,legend=False)
-    # sns.kdeplot(data =task_ev, x='logOdds_behav',y='logOdds_'+model_name,hue='choice',levels=5,
-    #             ax=ax,palette={0:'blue',1:'red'},alpha=0.5,legend=False)
-    ax.axhline(0,color='k',ls=':',alpha=0.3)
-    ax.axvline(0,color='k',ls=':',alpha=0.3)
-    ax.axline((0,0),slope=1,color='k',ls=':',alpha=0.3)
+    for col in delta_metrics_to_compute:
+        metrics[f'stimdelta_{col}'] = metrics[col] - metrics[f'stim_{col}']
+        metrics[f'biasdelta_{col}'] = metrics[col] - metrics[f'bias_only_{col}']
 
-def plot_psycho_logOdds(task_ev,models = ['l1_0.1','l1_0.05','pca_10','behav'],ax=None):
-     if ax is None:
-        fig,ax = plt.subplots(1,1,figsize=(2,2),dpi=150,sharex=True,sharey=True)
-     for i,model_name in enumerate(models):
-         sns.pointplot(data=task_ev, x='logOdds_stim_category', y='proba_right_'+model_name, label=None,ax=ax,alpha=0.7)
- 
-         ax.set_title(model_name)
-         ax.axhline(0.5,color='k',ls=':',alpha=0.3)
-         off_axes(ax,which='top')
-         ax.set_ylabel('p(right)')
-         ax.set_xticklabels('')
 
-def plot_psycho_stim(task_ev,model_name = 'pca_10',ax=None):
-    if ax is None:
-        fig,ax = plt.subplots(1,1,figsize=(2,2),dpi=150,sharex=True,sharey=True)
+    metrics['mcFadden'] = 1 - (metrics['log_loss_test'] / metrics['bias_only_log_loss_test'])
+    metrics['mcFadden_detect'] = 1 - (metrics['log_loss_detect_test'] / metrics['bias_only_log_loss_detect_test'])
+    metrics['mcFadden_discrim'] = 1 - (metrics['log_loss_discrim_test'] / metrics['bias_only_log_loss_discrim_test'])
 
-    sns.pointplot(data=task_ev, x='visDiff_categorical', y='proba_right_'+model_name, hue='audDiff', palette='coolwarm',ax=ax,legend=None)
-    ax.set_title(model_name)
-    ax.axhline(0.5,color='k',ls=':',alpha=0.3)
-    off_axes(ax,which='top')
-    ax.set_ylabel('p(right)')
-    ax.set_xticklabels('')
+    # Ensure that the time_bin_mid column is treated as a categorical variable with a specific order
+
+    # metrics['time_bin_mid'] = pd.Categorical(metrics['time_bin_mid'], 
+    #                                          categories=sorted(metrics['time_bin_mid'].unique(), key=float), 
+    #                                          ordered=True)
+    metrics['is_at_choice_time'] = metrics['stub'].str.contains('choice') 
+    metrics['is_at_prestim_time'] = metrics['stub'].str.contains('prestim')
+
+    for col in delta_metrics_to_compute:
+
+        metrics[f'delta_{col}'] = np.where(metrics['is_at_prestim_time'], metrics[f'biasdelta_{col}'], metrics[f'stimdelta_{col}'])
+    
+    metrics['delta_log_loss_neg'] = -metrics['delta_log_loss_test']  # so that positive values indicate better than stim model
+
+    return metrics
+    

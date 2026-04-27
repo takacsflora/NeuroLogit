@@ -65,15 +65,15 @@ def filter_clusters(cluster_df,subject='AV030'):
     # filter clusters to good neurons with model fit and return indices
     sel_nrns = cluster_df[
         (cluster_df.bombcell_class!='noise') &
-        (cluster_df.BerylAcronym.isin(['MOs'])) & 
+        (cluster_df.BerylAcronym.isin(['SCm','SCs'])) & 
        # (cluster_df.r2_tot>0.00001) #& # any neuron where model has predicitve power
-        (cluster_df.subject==subject) &
+        (cluster_df.subject.isin([subject])) &
         (cluster_df['VE_choice']>0.005)
 
         ]
     return sel_nrns.index.values
 
-subject  = 'AV007'
+subject  = 'AV030'
 
 kernel_fitted_sidx = filter_clusters(kernel_fitted_clusters, subject=subject)
 clusters_sidx = filter_clusters(clusters, subject=subject)
@@ -184,37 +184,37 @@ for subject in unique_subjects:
     pc1_ipsi = pc1[contra.shape[1]:]
 
 
-    # contra_pref_neurons = np.sum(diff_kernel,axis=1)>0
-    # ipsi_pref_neurons = np.sum(diff_kernel,axis=1)<=0
+    contra_pref_neurons = np.sum(diff_kernel,axis=1)>0
+    ipsi_pref_neurons = np.sum(diff_kernel,axis=1)<=0
     # # do a pca on the choice kernels
-    # n_contra = np.sum(contra_pref_neurons)
-    # n_ipsi = np.sum(ipsi_pref_neurons)
-    # for i in range(n_contra):
-    #     ax.plot(ipsi[contra_pref_neurons][i],contra[contra_pref_neurons][i],'-',color="#F1CADD",alpha=0.7,
-    #             markeredgecolor='k',linewidth = 0.5,markeredgewidth=0.5)
+    n_contra = np.sum(contra_pref_neurons)
+    n_ipsi = np.sum(ipsi_pref_neurons)
+    for i in range(n_contra):
+        ax.plot(ipsi[contra_pref_neurons][i],contra[contra_pref_neurons][i],'-',color="#F1CADD",alpha=0.7,
+                markeredgecolor='k',linewidth = 0.5,markeredgewidth=0.5)
 
 
-    # for i in range(n_ipsi):
-    #     ax.plot(ipsi[ipsi_pref_neurons][i],contra[ipsi_pref_neurons][i],'-',color="#BEC6C5",alpha=0.7,
-    #             markeredgecolor='k',linewidth = 0.5,markeredgewidth=0.5)
+    for i in range(n_ipsi):
+        ax.plot(ipsi[ipsi_pref_neurons][i],contra[ipsi_pref_neurons][i],'-',color="#BEC6C5",alpha=0.7,
+                markeredgecolor='k',linewidth = 0.5,markeredgewidth=0.5)
 
 
     # mean_ipsi = np.mean(ipsi[contra_pref_neurons],axis=0)
     # mean_contra = np.mean(contra[contra_pref_neurons],axis=0)
 
-    mean_ipsi = pc1_ipsi
-    mean_contra = pc1_contra
-    before_choice_idx = tscale_kernel<=0.05
-    before_choice_ipsi = mean_ipsi[before_choice_idx]
-    before_choice_contra = mean_contra[before_choice_idx] 
+    # mean_ipsi = pc1_ipsi
+    # mean_contra = pc1_contra
+    # before_choice_idx = tscale_kernel<=0.05
+    # before_choice_ipsi = mean_ipsi[before_choice_idx]
+    # before_choice_contra = mean_contra[before_choice_idx] 
     
-    ax.plot(before_choice_ipsi, before_choice_contra, '->', color="#F47BB7", alpha=0.7, linewidth=1,markersize=1)
+    # ax.plot(before_choice_ipsi, before_choice_contra, '->', color="#F47BB7", alpha=0.7, linewidth=1,markersize=1)
 
-    after_choice_idx = tscale_kernel>=0
-    after_choice_ipsi = mean_ipsi[after_choice_idx]
-    after_choice_contra = mean_contra[after_choice_idx] 
+    # after_choice_idx = tscale_kernel>=0
+    # after_choice_ipsi = mean_ipsi[after_choice_idx]
+    # after_choice_contra = mean_contra[after_choice_idx] 
 
-    ax.plot(after_choice_ipsi, after_choice_contra, '->', color="#D70173", alpha=0.7, linewidth=1,markersize=1)
+    # ax.plot(after_choice_ipsi, after_choice_contra, '->', color="#D70173", alpha=0.7, linewidth=1,markersize=1)
     #ax.scatter(mean_ipsi,mean_contra,c=(tscale_kernel<0),cmap='copper',s=5,edgecolor='k',linewidth=0.2)     
     # mean_ipsi = np.mean(ipsi[ipsi_pref_neurons],axis=0)
     # mean_contra = np.mean(contra[ipsi_pref_neurons],axis=0)
@@ -235,8 +235,8 @@ ax.axvline(0,color='k',linestyle=':',linewidth=0.5)
 ax.set_aspect('equal')
 ax.axline((0,0),slope=1,color='k',linestyle=':',linewidth=0.5)
 
-# ax.set_xlim([-1,5])
-# ax.set_ylim([-1,5])
+ax.set_xlim([-1,5])
+ax.set_ylim([-1,5])
 
 
 #%%

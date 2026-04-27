@@ -92,7 +92,8 @@ class BaseTrainer(ABC):
             trainable_param_starting_points,
             args=(X, y, param_mask, fixed_params),
             bounds=trainable_param_bounds,
-            options={'disp': False},  # Suppress printing all the output
+            method='L-BFGS-B',
+            options={'maxiter': 10000, 'disp': False, 'gtol': 1e-6},  # Suppress printing all the output
 
         )
 
@@ -168,13 +169,26 @@ class MultinomialLogit(Logit):
     
     def predict_proba(self, X):
         zL,zR = self.predict_log_proba(X)
-        expzL = np.exp(zL)
-        expzR = np.exp(zR)
 
-        denom = 1 + expzL + expzR
-        pNoGo = 1 / denom
-        pL = expzL / denom
-        pR = expzR / denom
+        # compute probabilities using the softmax function
+        # expzL = np.exp(zL)
+        # expzR = np.exp(zR)
+
+        # denom = 1 + expzL + expzR
+        # pNoGo = 1 / denom
+        # pL = expzL / denom
+        # pR = expzR / denom
+
+        # stable softmax computation
+        maxz = np.maximum.reduce([zL, zR, np.zeros_like(zL)])
+
+        exp0 = np.exp(0 - maxz)
+        expL = np.exp(zL - maxz)
+        expR = np.exp(zR - maxz)
+        denom = exp0 + expL + expR
+        pNoGo = exp0 / denom
+        pL = expL / denom
+        pR = expR / denom
 
         return np.hstack([pNoGo, pL, pR])
     

@@ -2,7 +2,7 @@
 
 # fit all the behavioural models ... 
 from src.ephys.dat_utils import get_ephys_dataset, load_trial_data
-from src.models.av_models_multi import av_multi_symmetric_audio
+from src.models.av_models_multi import av_multi_symmetric_audio,av_multi_asymetric
 from src.models.av_models_opto import av_split  
 
 
@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 
 
 # load data
-sessions = get_ephys_dataset()
+sessions = get_ephys_dataset(subset='AV030')
 sessions['session'] = sessions['subject'] + '_' + sessions['date']
 
 
@@ -39,7 +39,7 @@ for _, args in sessions[['subject', 'date']].iterrows():
         df_behav['date'] = args['date']
         df_behav['session'] = f"{args['subject']}_{args['date']}"
         all_behav_dfs.append(df_behav)
-    except FileNotFoundError:
+    except (FileNotFoundError, AttributeError):
         print(f"Data for {args['subject']} on {args['date']} not found. Skipping.")
         continue
 
@@ -99,10 +99,27 @@ for subj_idx, subj_sessions in enumerate(sessions_per_subject):
         #       fixed_params={'gamma': gamma})
 
 
-        m = av_multi_symmetric_audio()
+        # m = av_multi_symmetric_audio()
+        # m.fit(df_session[predictors], 
+        #       df_session['choice']+1,
+        #       fixed_params={'gamma': gamma})  
+        
+        m = av_multi_asymetric()
         m.fit(df_session[predictors], 
               df_session['choice']+1,
-              fixed_params={'gamma': gamma})  
+              fixed_params={'gamma': gamma})
+        
+        
+        y_pred = m.predict(df_session[predictors])
+        y_true = df_session['choice'] + 1
+
+        # confusion matrix
+        from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+        cm = confusion_matrix(y_true, y_pred)
+        disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=np.unique(y_true))
+        disp.plot(cmap=plt.cm.Blues)
+        plt.title(f"{df_session.subject.iloc[0]} {df_session.date.iloc[0]}")
+        plt.show()
 
 
 
@@ -138,7 +155,7 @@ params_per_session = pd.concat(params_per_session, ignore_index=True)
 plt.tight_layout()
 
 #
-params_per_session.to_csv(r'C:\Users\Flora\Documents\Github\NeuroLogit\data\behaviour\logit_params_per_session_ephys.csv',index=False)
+#params_per_session.to_csv(r'C:\Users\Flora\Documents\Github\NeuroLogit\data\behaviour\logit_params_per_session_ephys.csv',index=False)
 
 
 # %%
@@ -173,4 +190,33 @@ for ax in g.axes.flatten():
 plt.show()
 
 
+# %%
+
+
+# now we will test if we get the same parameters if instead we fit with sklearn
+
+# check the confusion matrix as well
+from sklearn.linear_model import LogisticRegression
+
+
+df_mouse['visR_gamma'] = df_mouse['visR'] ** gamma
+df_mouse['visL_gamma'] = df_mouse['visL'] ** gamma
+df_mouse['bias'] = 1 
+
+df_session = df_mouse[df_mouse['session'] == session].copy()
+
+
+
+# okay I think the results are quite similar now! 
+
+sensory_pred_no_intercept = ['visR_gamma','visL_gamma','audR','audL', 'bias']
+
+model = LogisticRegression(penalty=None,solver='lbfgs',C=1e9,multi_class='multinomial',
+                           fit_intercept=False,max_iter=1000000)
+model.fit(df_session[sensory_pred_no_intercept],df_session['choice']+1)
+
+coef = model.coef_
+
+coefR = coef[2]-coef[0]
+coefL = coef[1]-coef[0]
 # %%

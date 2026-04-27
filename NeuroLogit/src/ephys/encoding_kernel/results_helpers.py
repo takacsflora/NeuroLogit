@@ -89,13 +89,14 @@ def add_info_to_clusters(clusters,kernels,feature_column_dict,VE_threshold=0.001
     if is_active:
         clusters['is_task'] = clusters['significant_task'] 
         clusters['is_choice'] = clusters['significant_choice']
+        clusters['is_choice_contra'] = clusters['significant_choice_contra']
+        clusters['is_choice_ipsi'] = clusters['significant_choice_ipsi']
+
 
     clusters['functional_type'] = 'non_significant'
     clusters.loc[clusters['is_visual'], 'functional_type'] = 'visual'
     clusters.loc[clusters['is_auditory'], 'functional_type'] = 'auditory'
     clusters.loc[clusters['is_AV'], 'functional_type'] = 'AV'
-
-
 
 def make_kernel_dict(kernels, feature_column_dict, kernel_tscale):
     kernels_dict = {}

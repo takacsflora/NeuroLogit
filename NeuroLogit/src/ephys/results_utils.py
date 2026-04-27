@@ -26,7 +26,12 @@ def read_files(which_result = 'ccCP_results',filestub='clusters',extension='csv'
     e.g. (0,0,'Right') for psth for trials with no visual or auditory stimulus and a right choice. The requested conditions will be averaged together. 
     """
     result_path = Path(rf'D:\AV_Neural_Data_Sept2025\{which_result}')
+    # maybe I should name my files better -- becaus this doesn't work for decoding but if I change it it will read in Ridge 10 and 100 equally...
+    
     files = list(result_path.rglob(f'*{filestub}.{extension}'))
+    if len(files) == 0:
+        print('trying with allowing the * filestub *, caution... ')
+        files = list(result_path.rglob(f'*{filestub}*.{extension}'))
 
     if sessions=='unique':
         files = [f for f in files if f.parent.stem in UNIQUE_SESSIONS]
