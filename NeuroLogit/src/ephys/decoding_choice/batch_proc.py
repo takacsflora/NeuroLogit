@@ -108,6 +108,6 @@ def batch_fit_sessions(recompute=False,model_type='multinomial'):
                     f.write(str(e))
 
 if __name__ == "__main__":
-    batch_fit_sessions(recompute=True, model_type='scipy_taskorchoice_l1')
+    batch_fit_sessions(recompute=True, model_type='scipy_all_l1')
 
 

@@ -4,7 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import log_loss, roc_auc_score
+from sklearn.metrics import log_loss, roc_auc_score, brier_score_loss
 
 
 from sklearn.decomposition import PCA
@@ -110,7 +110,7 @@ def load_and_format_session(subject,date,time_kws,VE_choice_thr=0.005,encoder_mo
             'class_idx_to_name': {0:'NoGo',1:'Left',2:'Right'}
 }
 
-def assess_logLik_per_choice(choices, probs):
+def assess_logLoss_and_brier_score_per_choice(choices, probs):
     """
     Decomposes Log-Likelihood for a 3-choice model (0: NoGo, 1: Left, 2: Right).
     
@@ -144,6 +144,10 @@ def assess_logLik_per_choice(choices, probs):
                  
     avg_ll_detect = ll_go_nogo / len(choices)
 
+
+    brier_detect = brier_score_loss(is_go_trial, p_go)
+
+
     # ---------------------------------------------------------
     # PART B: Discrimination (Left vs Right)
     # ---------------------------------------------------------
@@ -176,11 +180,15 @@ def assess_logLik_per_choice(choices, probs):
         ll_lr = ll_L + ll_R
         avg_ll_discrim = ll_lr / len(go_indices)
 
+        brier_discrim = brier_score_loss(choices_lr == 1, p_L_cond)
+
     return {
         "Detection_LL_Total": ll_go_nogo,
         "Detection_LL_PerTrial": avg_ll_detect,
         "Discrim_LL_Total": ll_lr,
-        "Discrim_LL_PerTrial": avg_ll_discrim
+        "Discrim_LL_PerTrial": avg_ll_discrim,
+        "Detection_Brier": brier_detect,
+        "Discrim_Brier": brier_discrim
     }
 
 def format_model_output_scipy(model, ev_df, X_data, model_prefix, class_idx_to_name):
@@ -240,14 +248,16 @@ def format_model_output_scipy(model, ev_df, X_data, model_prefix, class_idx_to_n
     zR_test  = updated_ev_df.loc[ev_test_idx, f'logOdds_R_vs_NoGo_{model_prefix}']
     zL_train  = updated_ev_df.loc[~ev_test_idx, f'logOdds_L_vs_NoGo_{model_prefix}']
     zL_test  = updated_ev_df.loc[ev_test_idx, f'logOdds_L_vs_NoGo_{model_prefix}']
+
+
     log_loss_train = log_loss(y_true_train,probas_train, normalize=True)
     log_loss_test = log_loss(y_true_test,probas_test, normalize=True)
     auc_roc_train = roc_auc_score(y_true_train,probas_train, multi_class='ovr',average=None)
     auc_roc_test = roc_auc_score(y_true_test,probas_test, multi_class='ovr',average=None)
 
     # caclulate the logLikelihoods of Go vs NoGo and Left vs Right specifically... 
-    logLiks_per_choice_train = assess_logLik_per_choice(y_true_train.values, probas_train)
-    logLiks_per_choice_test = assess_logLik_per_choice(y_true_test.values, probas_test)
+    scores_per_choicecat_train = assess_logLoss_and_brier_score_per_choice(y_true_train.values, probas_train)
+    scores_per_choicecat_test = assess_logLoss_and_brier_score_per_choice(y_true_test.values, probas_test)
 
     # now we will also calculate the auc_roc pairwise
     auc_roc_train_L_vs_Nogo = pairwise_auc_roc(y_true_train,zL_train,pair=[name_to_idx['Left'],name_to_idx['NoGo']])
@@ -291,12 +301,20 @@ def format_model_output_scipy(model, ev_df, X_data, model_prefix, class_idx_to_n
     # you can later merge this with other model scores
     metrics_df = pd.DataFrame({
         'model': [model_prefix],
-        'log_loss_train': [log_loss_train],
-        'log_loss_test': [log_loss_test],
-        'log_loss_detect_train': [logLiks_per_choice_train['Detection_LL_PerTrial']],
-        'log_loss_detect_test': [logLiks_per_choice_test['Detection_LL_PerTrial']],
-        'log_loss_discrim_train': [logLiks_per_choice_train['Discrim_LL_PerTrial']],
-        'log_loss_discrim_test': [logLiks_per_choice_test['Discrim_LL_PerTrial']],
+        'logLik_train': [-log_loss_train],
+        'logLik_test': [-log_loss_test],
+        'logLik_detect_train_total': [scores_per_choicecat_train['Detection_LL_Total']],
+        'logLik_detect_test_total': [scores_per_choicecat_test['Detection_LL_Total']],
+        'logLik_discrim_train_total': [scores_per_choicecat_train['Discrim_LL_Total']],
+        'logLik_discrim_test_total': [scores_per_choicecat_test['Discrim_LL_Total']],
+        'logLik_detect_train_avg_per_trial': [scores_per_choicecat_train['Detection_LL_PerTrial']],
+        'logLik_detect_test_avg_per_trial': [scores_per_choicecat_test['Detection_LL_PerTrial']],
+        'logLik_discrim_train_avg_per_trial': [scores_per_choicecat_train['Discrim_LL_PerTrial']],
+        'logLik_discrim_test_avg_per_trial': [scores_per_choicecat_test['Discrim_LL_PerTrial']],
+        'brier_detect_train': [scores_per_choicecat_train['Detection_Brier']],
+        'brier_detect_test': [scores_per_choicecat_test['Detection_Brier']],
+        'brier_discrim_train': [scores_per_choicecat_train['Discrim_Brier']],
+        'brier_discrim_test': [scores_per_choicecat_test['Discrim_Brier']],
         'auc_roc_NoGo_vs_rest_train': [auc_roc_train[0]],
         'auc_roc_Left_vs_rest_train': [auc_roc_train[1]],
         'auc_roc_Right_vs_rest_train': [auc_roc_train[2]],

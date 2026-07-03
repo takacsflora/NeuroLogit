@@ -43,7 +43,7 @@ clusters = results['clusters']
 clusters['is_sensory'] = clusters[[f'is_visual',f'is_auditory',f'is_AV']].any(axis=1)
 
 #%%
-brain_region = 'MOs'
+brain_region = 'SCm'
 sel_clusters = clusters[
     (clusters.bombcell_class=='good') &
     (clusters.BerylAcronym.isin([brain_region]))# &
@@ -82,6 +82,38 @@ print(f"sensory but not choice: {sensory_not_choice/n_neurons*100:.1f}%")
 
 signficant_task_and_choice = sel_clusters[sel_clusters['is_task'] & sel_clusters['is_choice']].shape[0]
 print(f"Task and choice: {signficant_task_and_choice/n_neurons*100:.1f}%")
+
+
+
+
+# for significant choice perfrom test of ipsi vs contra amp asking whether contra is bigger than ipsi on average across neurons
+
+mean_amp_choice_ipsi_per_subject = (
+    sel_clusters[sel_clusters['is_choice']]
+    .groupby('subject')['amp_choice_ipsi']
+    .mean()
+    .sort_index()
+)
+print('Average amp_choice_ipsi per subject (choice neurons):')
+print(mean_amp_choice_ipsi_per_subject)
+
+
+# contra 
+mean_amp_choice_contra_per_subject = (
+    sel_clusters[sel_clusters['is_choice']]
+    .groupby('subject')['amp_choice_contra']
+    .mean()
+    .sort_index()
+)
+
+
+
+from scipy.stats import ttest_rel
+t_stat, p_value = ttest_rel(mean_amp_choice_ipsi_per_subject, mean_amp_choice_contra_per_subject,alternative='less')
+print(f"Paired t-test between ipsi and contra choice amplitudes: t-statistic = {t_stat:.2f}, p-value = {p_value:.4f}")
+
+
+
 
  #%% sort by rastermap
 kernels = results['kernels']
@@ -179,7 +211,7 @@ cbar.set_label('Kernel Coefficients')
 plt.tight_layout()
 
 #fig.savefig(SAVE_PATH / f'all_kernels_rastermap_sorted_{brain_region}.svg', dpi=300, bbox_inches='tight')
-fig.savefig(SAVE_PATH / f'{brain_region}_rastermap_sorted_{brain_region}_with_colorbar.png', dpi=400, bbox_inches='tight')
+fig.savefig(SAVE_PATH / f'{brain_region}_rastermap_sorted_{brain_region}_with_colorbar.svg', dpi=300, bbox_inches='tight')
 
 
  #%% plot all responses, rastermap sorted on passive and correct
@@ -192,7 +224,7 @@ example_neurons = [218,259,369,327]
 audstim = [1,0,-1]
 visstim = trig_kws['vis_conds']
 
-time_period = (-0.1,.45) # time period to average over
+time_period = (-0.1,.46) # time period to average over
 t_idx = (results['response_tscale'] >= time_period[0]) & (results['response_tscale'] < time_period[1])
 tscale_t = results['response_tscale'][t_idx]
 psth_idx = np.ix_(SC_neuron_inds[isort],t_idx)
@@ -205,8 +237,8 @@ fig, axs = plt.subplots(n_aud,n_vis,sharex=True,sharey=True,figsize=(2,2))
 fig.subplots_adjust(wspace=0.05,hspace=0.1)
 # Set transparent background for the figure
 fig.patch.set_alpha(0.0)
-resptype = 'ipsi' 
-clip_limit = 3
+resptype = 'contra' 
+clip_limit = 2
 extent = [tscale_t[0], tscale_t[-1],  n_neurons, 0]
 for i,aud in enumerate(audstim):
     for j,vis in enumerate(visstim):

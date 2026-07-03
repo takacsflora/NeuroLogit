@@ -75,9 +75,12 @@ def read_files(which_result = 'ccCP_results',filestub='clusters',extension='csv'
 def get_brain_region_colors():
 
     region_colors = {
-        'MOs': "#17c071", # orange
-        'SCm': "#f738e4", # blue
-        'SCs': "#1cc0dd", # green
+        # 'MOs': "#17c071", # orange
+        # 'SCm': "#f738e4", # blue
+        # 'SCs': "#1cc0dd", # green
+        'MOs': "#6f916f", # orange
+        'SCm': "#7137c8ff", # blue
+        'SCs': "#55ddffff", # green
     }
 
     return region_colors

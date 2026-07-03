@@ -4,8 +4,7 @@ from pathlib import Path
 import pandas as pd 
 import numpy as np 
 
-from NeuroLogit.src.ephys.results_utils import read_files
-from NeuroLogit.src.ephys.results_utils import read_files 
+from NeuroLogit.src.ephys.results_utils import read_files,get_brain_region_colors
 from results_helpers import format_scores
 
 import matplotlib.pyplot as plt 
@@ -17,11 +16,11 @@ from sklearn.metrics import roc_auc_score
 
 SAVE_PATH = Path(r'C:\Users\Flora\OneDrive - University College London\Cortexlab\papers\SCpaper_v2025Dec\raw plots\Choice')
 
-plt.rcParams.update({'font.size': 7,'font.family':'Calibri','axes.linewidth':0.2,'axes.spines.top':False,'axes.spines.right':False,
+plt.rcParams.update({'font.size': 8,'font.family':'Calibri','axes.linewidth':0.2,'axes.spines.top':False,'axes.spines.right':False,
                      'axes.spines.left':True,'axes.spines.bottom':True,
                      'xtick.direction':'out','ytick.direction':'out','xtick.major.size':2,'ytick.major.size':2})
 
-# SAVE_PATH = Path(r'C:\Users\Flora\OneDrive - University College London\Cortexlab\conferences\Cosyne2026\Poster figures')
+#SAVE_PATH = Path(r'C:\Users\Flora\OneDrive - University College London\Cortexlab\conferences\Cosyne2026\Poster figures')
 
 # plt.rcParams.update({'font.size': 24,'font.family':'Calibri','axes.linewidth':1,'axes.spines.top':False,'axes.spines.right':False,
 #                      'axes.spines.left':True,'axes.spines.bottom':True,
@@ -29,10 +28,10 @@ plt.rcParams.update({'font.size': 7,'font.family':'Calibri','axes.linewidth':0.2
 
 # %
 
-#time_stub = 'prestim_pre0.2_post0.0'
+time_stub = 'prestim_pre0.2_post0.0'
 time_stub = 'choice_pre0.2_post0.0'
 model_type = 'scipy_taskorchoice_l1'  # model types to load results for
-which_sesh = 'unique'
+which_sesh = None # list of sessionIDs to load, or None to load all'
 ev = read_files(which_result = 'decoding_choice_results', filestub=f'task_ev_{model_type}_{time_stub}', extension='csv', sessions=which_sesh)
 weights = read_files(which_result = 'decoding_choice_results', filestub=f'weights_{model_type}_{time_stub}', extension='csv', sessions=which_sesh)
 metrics = read_files(which_result = 'decoding_choice_results', filestub=f'metrics_{model_type}_{time_stub}', extension='csv', sessions=which_sesh)
@@ -50,21 +49,17 @@ unique_models = metrics['model'].unique()
 for model in unique_models:
     ev['logOdds_R_vs_L_'+model] = ev[f'logOdds_L_vs_R_{model}'] * -1
 
-
 metrics = format_scores(metrics)
-
+#%%
 auc_roc_test_cols = [col for col in metrics.columns if col.startswith('auc_roc') and col.endswith('_test')] 
 # plot the various auc_roc_metrics for a given model in different brain regions
 
 stim_model_name = 'stim'
-model_name = 'no_bias'
+model_name = 'full'
 
 
-stim_model_metrics = metrics[metrics.model==stim_model_name][['sessionID','roi_fitted'] + auc_roc_test_cols]
-stim_model_metrics = stim_model_metrics.rename(columns={col:f'{stim_model_name}_{col}' for col in auc_roc_test_cols})
-metrics = metrics.merge(stim_model_metrics, on=['sessionID','roi_fitted'], how='left')#%%
 fig,ax = plt.subplots(1,1,figsize=(2,2),dpi=150)
-sns.lineplot(data=metrics, x='model', y='delta_log_loss_discrim_test',
+sns.lineplot(data=metrics, x='model', y='delta_logLik_test',
             hue='roi_fitted',ax=ax,legend = True)
 
 
@@ -76,14 +71,14 @@ ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right')
 
 #%%
 # t-test for full vs no_bias model
-full_metrics = metrics[metrics.model=='contra']
+full_metrics = metrics[metrics.model=='full']
 no_bias_metrics = metrics[metrics.model=='no_bias']
 from scipy.stats import ttest_rel
 
-metric = 'delta_log_loss_neg'
+metric = 'delta_logLik_test'
 ttest_res = ttest_rel(full_metrics[metric], 
                       no_bias_metrics[metric])
-print(f"T-test full vs no_bias delta log_loss: t={ttest_res.statistic   :.2f}, p={ttest_res.pvalue:.4f}")
+print(f"T-test full vs no_bias delta logLik: t={ttest_res.statistic   :.2f}, p={ttest_res.pvalue:.4f}")
 
 
 
@@ -92,7 +87,7 @@ print(f"T-test full vs no_bias delta log_loss: t={ttest_res.statistic   :.2f}, p
 
 # region ev 
 
-roi,subject = 'MOs','AV008'
+roi,subject = 'SCm','AV008'
 model_name_x = 'stim'
 model_name_y = 'full'
 comparison_to_plot = 'R_vs_L'
@@ -332,8 +327,9 @@ weight_data = pd.DataFrame({
     'roi': rois.values
 })
 
-sns.scatterplot(data=weight_data, x='contra_weight', y='ipsi_weight', hue='roi', ax=ax)
+sns.scatterplot(data=weight_data[weight_data.roi=='SCm'], x='contra_weight', y='ipsi_weight', hue='roi', ax=ax)
 
+#sns.kdeplot(data=weight_data[weight_data.roi=='MOs'], x='contra_weight', y='ipsi_weight', ax=ax, levels=3, fill=False, alpha=0.5, linewidth=1)
 corr = np.corrcoef(contra_full_model.values,
             ipsi_full_model.values)[0,1]
 ax.set_title(f'Correlation: {corr:.2f}')
@@ -350,7 +346,7 @@ ax.set_ylabel('Ipsi weight full')
 # %%
 import pandas as pd
 
-region = 'MOs'
+region = 'SCm'
 region_ev = ev[(ev.roi_fitted==region) & (ev.is_test_set)].copy()
 
 fig,axs = plt.subplots(2,1,figsize=(1.2,1.5),dpi=150,height_ratios=[3,1],sharex=True)
@@ -405,91 +401,357 @@ fig.savefig(SAVE_PATH / f'logOddsbins_vs_choice_fractions_{region}_{which_logOdd
 
 # appears to be called signed log-odds
 
-roi = 'SCs'
-model_name_x = 'stim'
-model_name_y = 'full'
-comparison_to_plot = 'R_vs_L'
+
+
+def plot_signed_logOdds_comparison(ev, roi, model_name_x, model_name_y, comparison_to_plot,ax=None):  
+
+    region_ev = ev[(ev.roi_fitted==roi) & (ev.is_test_set)].copy()
+
+
+    if ax is None:
+        fig,ax = plt.subplots(1,1,figsize=(1.3,1.25),dpi=150)
+        fig.subplots_adjust(hspace=0.5, wspace=0.5)
+    
+    scatterax = ax
+
+
+    if comparison_to_plot == 'R_vs_L':
+        metric_x, metric_y = 'R_vs_L', 'R_vs_L'
+        palette_color = {'left':'magenta','right':'green'}
+        hue_order = ['left','right']
+        hue_var = 'choice_categorical'
+        auc_mapping = {'left':0,'right':1}
+        signed_odds_mapping = {'left':-1,'right':1}
+        lims = [-7,18]
+        ticks = [-5,0,5,10,15]
+        ticklabels = [ '-5','0', '5','10','15' ]
+
+    elif comparison_to_plot == 'Go_vs_NoGo':
+        metric_x, metric_y = 'Go_vs_NoGo', 'Go_vs_NoGo'    
+        palette_color = {'NoGo':'orange','Go':'violet'}
+        hue_order = ['NoGo','Go']
+        hue_var = 'GoNoGo_categorical'
+        auc_mapping = {'NoGo':0,'Go':1}
+        signed_odds_mapping = {'NoGo':-1,'Go':1}
+        lims = [-7,18]
+        ticks = [-5,0,5,10,15]
+        ticklabels =  [ '-5','0', '5','10','15' ]
+
+
+    #scatterax = axs[1,0]
+    region_ev_sel_choice = region_ev[region_ev[hue_var].isin(hue_order)]
+
+    print(f"Number of trials for {roi}, {comparison_to_plot}: {len(region_ev_sel_choice)}, no of subjects: {region_ev_sel_choice.subject.nunique()}, no of sessions: {region_ev_sel_choice.sessionID.nunique()}")
+
+
+    region_ev_sel_choice = region_ev_sel_choice.assign(
+        signed_logOdds_x = region_ev_sel_choice[f'logOdds_{metric_x}_{model_name_x}'] * region_ev_sel_choice[hue_var].map(signed_odds_mapping),
+        signed_logOdds_y = region_ev_sel_choice[f'logOdds_{metric_y}_{model_name_y}'] * region_ev_sel_choice[hue_var].map(signed_odds_mapping)
+    )
+
+    sns.scatterplot(data=region_ev_sel_choice,
+                    x='signed_logOdds_x', 
+                    y='signed_logOdds_y',alpha=0.3,
+                    hue=hue_var,hue_order=hue_order,palette=palette_color,ax=scatterax,s=5,
+                    edgecolor='black',linewidth=0.3,legend=False)
+
+    # bins = np.linspace(-10.5,10.5,33)
+    # sns.histplot(data=region_ev_sel_choice, x='signed_logOdds_x',y='signed_logOdds_y',
+    #                 bins=(bins, bins), pthresh=0.05, cmap='Blues', ax=scatterax, legend=False)
+    # sns.kdeplot(data=region_ev_sel_choice, x='signed_logOdds_x',y='signed_logOdds_y',
+    #             levels=3,hue=hue_var,hue_order=hue_order,
+    #             palette=palette_color, ax=scatterax,
+    #             fill=False,alpha=0.5,linewidth=1,legend=False)
+
+
+    scatterax.axhline(0,color='gray',ls=':',linewidth=1)
+    scatterax.axvline(0,color='gray',ls=':',linewidth=1)
+    scatterax.axline((0,0),slope=1,color='gray',ls=':',linewidth=1)
+
+
+    scatterax.set_xlim(lims)
+    scatterax.set_ylim(lims) 
+
+    scatterax.set_xticks(ticks)
+    scatterax.set_yticks(ticks)
+
+    scatterax.set_xticklabels(ticklabels)
+    scatterax.set_yticklabels(ticklabels)
+
+    scatterax.set_xlabel(f'Signed odds,{model_name_x} model') 
+    scatterax.set_ylabel(f'Signed odds,{model_name_y} model')
+
+
+
+rois = ['MOs','MOs']
+comparisons = ['R_vs_L','Go_vs_NoGo']
+fig,ax = plt.subplots(1,len(rois),figsize=(len(rois)*1.4,1.5),dpi=150)
+fig.subplots_adjust(wspace=0.3)
+
+for i, (roi, comparison) in enumerate(zip(rois, comparisons)):
+    plot_signed_logOdds_comparison(ev, roi, model_name_x, model_name_y, comparison, ax=ax[i])
+    ax[i].set_title(f'{roi} {comparison}')
+    ax[i].grid(False)
+    if i>0:
+        ax[i].set_ylabel('')
+        ax[i].set_yticklabels([])
+    ax[i].set_title('')
+    ax[i].set_xlabel('')
+    ax[i].set_ylabel('')
+    
+plt.tight_layout()
+
+fig.savefig(SAVE_PATH / f'scatterplot_signed_logOdds_comparison_{roi}_{model_name_x}_vs_{model_name_y}_{time_stub}.png', dpi=400)
+
+
+# %%
+
+region_colors = get_brain_region_colors()
+
+
+
+rois = ['SCs','SCm','MOs']
+
+
+tested_metrics = [
+   # 'logLik_test',
+    # 'logLik_discrim_test_avg_per_trial',
+    # 'logLik_detect_test_avg_per_trial',
+    # 'auc_roc_R_vs_L_test', 
+    # 'auc_roc_NoGo_vs_rest_test', 
+    'brier_discrim_test',
+    'brier_detect_test',
+
+]
+
+
+def stat_tests(metrics_df,model_x='stim',model_y='full'):
+    # input the metrics_pivot df essentially
+    import statsmodels.formula.api as smf
+    from statsmodels.tools.sm_exceptions import ConvergenceWarning
+    import warnings
+    
+    warnings.filterwarnings('ignore', category=ConvergenceWarning)
+    
+    metrics_df['delta_metric'] = metrics_df[f'{model_y}'] - metrics_df[f'{model_x}']
+
+    regions = metrics_df['roi_fitted'].unique()
+    for region in regions:
+        region_data = metrics_df[metrics_df['roi_fitted'] == region]
+        try: 
+            model = smf.mixedlm("delta_metric ~ 1", region_data, groups=region_data["subject"])
+            result = model.fit()
+
+            intercept = result.params['Intercept']
+            p_two_tailed = result.pvalues['Intercept']
+
+            if intercept > 0:
+                p_one_tailed = p_two_tailed / 2
+            else:
+                p_one_tailed = 1 - (p_two_tailed / 2)
+            
+            print(
+                f"Region: {region}, "
+                f"Coefficient: {intercept:.3f}, "
+                f"p-value, one sided for {model_y} > {model_x}: {p_one_tailed:.4f}"
+            )
+        except Exception as e:
+            print(f"Region: {region}, model fit failed: {e}")
+
+
+    print('SCm vs MOs comparison:')
+    metrics_SCmMOs = metrics_df[metrics_df['roi_fitted'].isin(['SCm', 'MOs'])].copy()
+    model = smf.mixedlm("delta_metric ~ roi_fitted", metrics_SCmMOs, groups=metrics_SCmMOs["subject"])
+    result = model.fit()
+
+    print(result.summary())
+
+
+
+n_plots = len(tested_metrics) * len(rois)
+fig,axs = plt.subplots(1,n_plots,figsize=(n_plots*1,1.5),dpi=150,sharex=True,sharey=True)
+
+
+for m in tested_metrics:
+    print(f"Testing metric: {m}")
+    metrics_subset = metrics[['sessionID','roi_fitted','subject', 'model', m]].copy()
+
+    metrics_pivot = (
+        metrics_subset
+        .pivot_table(
+            index=['sessionID','roi_fitted','subject'],
+            columns='model',          # gives one column per model (full, stim, etc.)
+            values=m,
+            aggfunc='first'
+                                # or 'mean' if you have duplicates per session/model
+        )
+        .reset_index()
+    ) 
+
+
+    stat_tests(metrics_pivot, model_x='full', model_y='stim')
+
+
+
+import itertools
+
+for i, (roi, m) in enumerate(itertools.product(rois, tested_metrics)):
+    ax = axs[i]
+
+
+    metrics_subset = metrics[['sessionID','roi_fitted','subject', 'model', m]].copy()
+
+    metrics_pivot = (
+        metrics_subset
+        .pivot_table(
+            index=['sessionID','roi_fitted','subject'],
+            columns='model',          # gives one column per model (full, stim, etc.)
+            values=m,
+            aggfunc='first'
+                                # or 'mean' if you have duplicates per session/model
+        )
+        .reset_index()
+    ) 
+
+    # average metrics_pivot across sessions for each subject and roi_fitted and also get error bars for each subject (e.g. by taking the standard deviation across sessions)
+    metrics_pivot_means = (
+        metrics_pivot
+        .groupby(['roi_fitted','subject'])
+        .mean()
+        .reset_index()
+    )
+
+    metrics_pivot_stds = (
+        metrics_pivot
+        .groupby(['roi_fitted','subject'])
+        .std()
+        .reset_index()
+    )
+
+    # sns.kdeplot(data=metrics_pivot,
+    #     x ='stim',
+    #     y='full',hue='roi_fitted',
+    #     levels=2,palette = region_colors, ax=ax,legend = False,alpha=0.5,linewidth=1)
+    
+    # sns.scatterplot(data=metrics_pivot_means[metrics_pivot_means.roi_fitted==roi],
+    #     x ='stim',
+    #     y='full',hue='roi_fitted',s=8,
+    #     legend=False,palette=region_colors,ax=ax,edgecolor='k')
+
+    plot_df = metrics_pivot_means[metrics_pivot_means.roi_fitted == roi].copy()
+    err_df = metrics_pivot_stds[metrics_pivot_stds.roi_fitted == roi].copy()
+    plot_df = plot_df.merge(
+        err_df[['subject', 'stim', 'full']].rename(
+            columns={'stim': 'stim_std', 'full': 'full_std'}
+        ),
+        on='subject',
+        how='left'
+    )
+
+    ax.errorbar(
+        plot_df['stim'],
+        plot_df['full'],
+        xerr=plot_df['stim_std'].fillna(0),
+        yerr=plot_df['full_std'].fillna(0),
+        fmt='none',
+        ecolor=region_colors[roi],
+        elinewidth=1.5,
+        alpha=1,
+        capsize=0,
+        zorder=1,
+    )
+    ax.scatter(
+        plot_df['stim'],
+        plot_df['full'],
+        s=16,
+        color=region_colors[roi],
+        edgecolor='k',
+        linewidth=0.4,
+        alpha=0.95,
+        zorder=2,
+    )
+
+    ax.set_title(f'{roi}\n{m.replace("_test_avg_per_trial", "").replace("logLik_", "")}', fontsize=7)
+    if i == 0:
+        ax.set_xlabel('stim')
+        ax.set_ylabel('full')
+    else:
+        ax.set_xlabel('')
+        ax.set_ylabel('')
+
+    
+
+    mean_val_at_stim = metrics_pivot.stim.mean()
+    ax.axline((mean_val_at_stim,mean_val_at_stim),slope=1,color='gray',ls=':')
+
+    ax.set_xlim([0.01,0.2])
+    ax.set_ylim([0.01,0.2])
+
+plt.tight_layout()
+
+fig.savefig(SAVE_PATH / f'model_comparison_metrics_scatter_full_vs_stim_{time_stub}.svg', dpi=150)
+
+
+
+
+# statistical test. 
+
+
+# %% reliability diagram
+from sklearn.calibration import calibration_curve
+roi = 'MOs'
 
 region_ev = ev[(ev.roi_fitted==roi) & (ev.is_test_set)].copy()
 
-proba_cols = [col for col in ev.columns if col.startswith('proba')]
-# fig,axs = plt.subplots(2,2,figsize=(2.2,2.5),dpi=150,
-#                        gridspec_kw={'width_ratios':[3,1], 'height_ratios':[1,3]})
+
+def plot_calibration_curve(df,which='Go', model_name='full', ax=None,**pkws):
+    if ax is None: 
+        fig,ax = plt.subplots(1, 2, figsize=(2, 2)) 
+    
+    if which=='Go':
+        y_true = df['choice_categorical'].isin(['left', 'right']).astype(int)
+        y_prob = df[f'proba_Go_{model_name}']
+
+    elif which =='NoGo':
+        y_true = (df['choice_categorical'] == 'NoGo').astype(int)
+        y_prob = df[f'proba_NoGo_{model_name}']
+
+    else: 
+        df_go = df[df['choice_categorical'].isin(['left', 'right'])].copy()
+
+        if which == 'Right':
+            y_true = (df_go['choice_categorical'] == 'right').astype(int)
+        elif which == 'Left':
+            y_true = (df_go['choice_categorical'] == 'left').astype(int)
+
+        y_prob_3_choice = df_go[f'proba_{which}_{model_name}']
+        y_prob = y_prob_3_choice / (df_go[f'proba_Go_{model_name}'])
 
 
-fig,axs = plt.subplots(1,1,figsize=(2.2,2.5),dpi=150)
-fig.subplots_adjust(hspace=0.5, wspace=0.5)
+    y_prob = np.clip(y_prob, 1e-15, 1.0)
+    prob_true, prob_pred = calibration_curve(y_true, y_prob, n_bins=8,strategy='quantile')
 
-if comparison_to_plot == 'R_vs_L':
-    metric_x, metric_y = 'R_vs_L', 'R_vs_L'
-    palette_color = {'left':'magenta','right':'green'}
-    hue_order = ['left','right']
-    hue_var = 'choice_categorical'
-    auc_mapping = {'left':0,'right':1}
-    signed_odds_mapping = {'left':-1,'right':1}
-    lims = [-10.5,10.5]
-    ticks = [5,0,-5]
-    ticklabels = [ '10⁵', '1', '10⁻⁵']
-
-elif comparison_to_plot == 'Go_vs_NoGo':
-    metric_x, metric_y = 'Go_vs_NoGo', 'Go_vs_NoGo'    
-    palette_color = {'NoGo':'orange','Go':'violet'}
-    hue_order = ['NoGo','Go']
-    hue_var = 'GoNoGo_categorical'
-    auc_mapping = {'NoGo':0,'Go':1}
-    signed_odds_mapping = {'NoGo':-1,'Go':1}
-    lims = [-7,15]
-    ticks = [10,0]
-    ticklabels = ['10¹⁰','1']
+    ax.plot(prob_pred, prob_true, '-',markeredgecolor='k', **pkws)
+    ax.plot([0, 1], [0, 1], ':', color='gray',linewidth=0.5)
 
 
-#scatterax = axs[1,0]
-scatterax = axs
-region_ev_sel_choice = region_ev[region_ev[hue_var].isin(hue_order)]
+
+fig,axs = plt.subplots(1,2,figsize=(3.5,1.5),dpi=150)
+fig.subplots_adjust(wspace=0.5)
+
+for model,my_color in zip(['full','stim','neural_only'],['cyan','grey','magenta']):
+    plot_calibration_curve(region_ev,which='Go', model_name=model, ax=axs[0], color=my_color,linewidth=2.5)
+    plot_calibration_curve(region_ev,which='Right', model_name=model, ax=axs[1], color=my_color,linewidth=2.5)
+
+axs[0].set_title('Go vs NoGo')
+axs[1].set_title('Right vs Left')  
+
+axs[0].set_xlabel('Predicted Probability of Go')
+axs[0].set_ylabel('True Probability of Go')
+axs[1].set_xlabel('Predicted Probability of Right (given Go)')
+axs[1].set_ylabel('True Probability of Right (given Go)')
 
 
-region_ev_sel_choice = region_ev_sel_choice.assign(
-    signed_logOdds_x = region_ev_sel_choice[f'logOdds_{metric_x}_{model_name_x}'] * region_ev_sel_choice[hue_var].map(signed_odds_mapping),
-    signed_logOdds_y = region_ev_sel_choice[f'logOdds_{metric_y}_{model_name_y}'] * region_ev_sel_choice[hue_var].map(signed_odds_mapping)
-)
-
-sns.scatterplot(data=region_ev_sel_choice,
-                x='signed_logOdds_x', 
-                y='signed_logOdds_y',alpha=0.2,
-                color='magenta',ax=scatterax,s=4,
-                edgecolor='black',linewidth=0.2,legend=False)
-
-# bins = np.linspace(-10.5,10.5,33)
-# sns.histplot(data=region_ev_sel_choice, x='signed_logOdds_x',y='signed_logOdds_y',
-#                 bins=(bins, bins), pthresh=0.05, cmap='Blues', ax=scatterax, legend=False)
-# sns.kdeplot(data=region_ev_sel_choice, x='signed_logOdds_x',y='signed_logOdds_y',
-#             fill=True,alpha=0.5,linewidth=1,
-#             palette=palette_color,ax=scatterax,legend=False)
-
-
-scatterax.axhline(0,color='gray',ls=':',linewidth=1)
-scatterax.axvline(0,color='gray',ls=':',linewidth=1)
-scatterax.axline((0,0),slope=1,color='gray',ls=':',linewidth=1)
-
-
-scatterax.set_xlim(lims)
-scatterax.set_ylim(lims) 
-
-scatterax.set_xticks(ticks)
-scatterax.set_yticks(ticks)
-
-scatterax.set_xticklabels(ticklabels)
-scatterax.set_yticklabels(ticklabels)
-
-scatterax.set_xlabel(f'Signed odds,{model_name_x} model') 
-scatterax.set_ylabel(f'Signed odds,{model_name_y} model')
-# %%
-# %%
-
-fig,ax = plt.subplots(1,1,figsize=(2.2,2.5),dpi=150)
-bins = np.linspace(-10.5,10.5,33)
-sns.histplot(data=region_ev_sel_choice, x='signed_logOdds_x', bins=bins, ax=ax,hue='grey')
-sns.kdeplot(data=region_ev_sel_choice, x='signed_logOdds_y', bins=bins, ax=ax,hue='cyan')
 
 
 # %%
