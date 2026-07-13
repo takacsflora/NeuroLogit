@@ -10,7 +10,7 @@ __pycache__/
 .Python
 build/
 exploratory/
-exploratory_visualisation/
+exploratory_visualization/
 data/
 dist/
 *.egg-info/
