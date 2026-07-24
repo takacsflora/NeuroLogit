@@ -236,8 +236,8 @@ class av_multi_asymetric(av_multi):
 
 #### the opto models  ####
 
-# maybe chainge to the symmetric audio model
-class avm_opto(av_multi):
+# maybe av_multi with symmetric audio model as control
+class avm_opto(MultinomialLogit):
     def __init__(self,
                  extra_param_names = [
                         'visR_opto','visL_opto','audR_opto','audL_opto',
@@ -294,3 +294,60 @@ class avm_opto(av_multi):
                 )
 
         return zL_ctrl-zL_opto,zR_ctrl-zR_opto    
+
+
+
+# model to accomodate for various power combinations of inactivation. 
+class avm_opto_powers(MultinomialLogit): 
+    def __init__(self,
+                 extra_param_names = [
+                        'visR_opto','visL_opto','audR_opto','audL_opto',
+                        'powerR','powerL'
+                        ],
+                 extra_param_init = {
+                        'visR_opto': 0,
+                        'visL_opto': 0,
+                        'audR_opto': 0,
+                        'audL_opto': 0,
+                        'powerR_onR': 0,
+                        'powerR_onL': 0,
+                        'powerL_onR': 0,
+                        'powerL_onL': 0,
+                     }):
+
+       super().__init__(extra_param_names,extra_param_init)
+
+
+    def predict_log_proba(self, X):
+        self.check_params()
+
+            # Extract inputs
+        vL = X[["visL"]].values ** self.params['gamma']
+        vR = X[["visR"]].values ** self.params['gamma']
+        aL = X[["audL"]].values
+        aR = X[["audR"]].values
+        pL = X[["optoL_power"]].values # power in the left hemisphere
+        pR = X[["optoR_power"]].values # power in the right hemisphere
+
+
+        # since we know we opto is primarily affect on contralateral bias but we are testing a secondary effect on ipsi bias...
+        zL_opto = pR *self.params['powerR_onL']  - pL * self.params['powerL_onL']
+        zR_opto = pL *self.params['powerL_onR']  - pR * self.params['powerR_onR']
+
+        zR_ctrl = (
+            self.params['visR'] * vR +
+            self.params['audR'] * aR +
+            -self.params['audL'] * aL +
+            self.params['biasR']
+             )
+        
+        zL_ctrl = (
+            self.params['visL'] * vL +
+            self.params['audL'] * aL +
+            -self.params['audR'] * aR +
+            self.params['biasL']
+                )
+        
+
+        return zL_ctrl-zL_opto,zR_ctrl-zR_opto
+#%% 
