@@ -309,6 +309,8 @@ class avm_opto_powers(av_multi):
             'powerR_onL': 0,
             'powerL_onR': 0,
             'powerL_onL': 0,
+            'powerR_gamma': 1,
+            'powerL_gamma': 1
             },
         extra_param_bounds = {
             'powerR_gamma': (0.2, 2),
