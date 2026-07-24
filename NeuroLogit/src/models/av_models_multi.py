@@ -300,17 +300,22 @@ class avm_opto(av_multi):
 # model to accomodate for various power combinations of inactivation. 
 class avm_opto_powers(av_multi): 
     def __init__(self,
-                 extra_param_names = [
-                        'powerR_onR','powerR_onL','powerL_onR','powerL_onL'
-                        ],
-                 extra_param_init = {
-                        'powerR_onR': 0,
-                        'powerR_onL': 0,
-                        'powerL_onR': 0,
-                        'powerL_onL': 0,
-                     }):
+        extra_param_names = [
+            'powerR_onR','powerR_onL','powerL_onR','powerL_onL'
+            'powerR_gamma','powerL_gamma'
+            ],
+        extra_param_init = {
+            'powerR_onR': 0,
+            'powerR_onL': 0,
+            'powerL_onR': 0,
+            'powerL_onL': 0,
+            },
+        extra_param_bounds = {
+            'powerR_gamma': (0.2, 2),
+            'powerL_gamma': (0.2, 2)
+        }):
 
-       super().__init__(extra_param_names,extra_param_init)
+       super().__init__(extra_param_names,extra_param_init,extra_param_bounds)
 
 
     def predict_log_proba(self, X):
@@ -321,8 +326,8 @@ class avm_opto_powers(av_multi):
         vR = X[["visR"]].values ** self.params['gamma']
         aL = X[["audL"]].values
         aR = X[["audR"]].values
-        pL = X[["left_power"]].values # power in the left hemisphere
-        pR = X[["right_power"]].values # power in the right hemisphere
+        pL = X[["left_power"]].values ** self.params['powerL_gamma'] # power in the left hemisphere
+        pR = X[["right_power"]].values ** self.params['powerR_gamma'] # power in the right hemisphere
 
 
         # since we know we opto is primarily affect on contralateral bias but we are testing a secondary effect on ipsi bias...
