@@ -237,7 +237,7 @@ class av_multi_asymetric(av_multi):
 #### the opto models  ####
 
 # maybe av_multi with symmetric audio model as control
-class avm_opto(MultinomialLogit):
+class avm_opto(av_multi):
     def __init__(self,
                  extra_param_names = [
                         'visR_opto','visL_opto','audR_opto','audL_opto',
@@ -298,7 +298,7 @@ class avm_opto(MultinomialLogit):
 
 
 # model to accomodate for various power combinations of inactivation. 
-class avm_opto_powers(MultinomialLogit): 
+class avm_opto_powers(av_multi): 
     def __init__(self,
                  extra_param_names = [
                         'visR_opto','visL_opto','audR_opto','audL_opto',
