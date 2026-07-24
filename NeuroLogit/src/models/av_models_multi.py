@@ -321,8 +321,8 @@ class avm_opto_powers(av_multi):
         vR = X[["visR"]].values ** self.params['gamma']
         aL = X[["audL"]].values
         aR = X[["audR"]].values
-        pL = X[["optoL_power"]].values # power in the left hemisphere
-        pR = X[["optoR_power"]].values # power in the right hemisphere
+        pL = X[["left_power"]].values # power in the left hemisphere
+        pR = X[["right_power"]].values # power in the right hemisphere
 
 
         # since we know we opto is primarily affect on contralateral bias but we are testing a secondary effect on ipsi bias...
