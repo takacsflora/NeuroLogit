@@ -301,14 +301,9 @@ class avm_opto(av_multi):
 class avm_opto_powers(av_multi): 
     def __init__(self,
                  extra_param_names = [
-                        'visR_opto','visL_opto','audR_opto','audL_opto',
-                        'powerR','powerL'
+                        'powerR_onR','powerR_onL','powerL_onR','powerL_onL'
                         ],
                  extra_param_init = {
-                        'visR_opto': 0,
-                        'visL_opto': 0,
-                        'audR_opto': 0,
-                        'audL_opto': 0,
                         'powerR_onR': 0,
                         'powerR_onL': 0,
                         'powerL_onR': 0,
