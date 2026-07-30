@@ -302,6 +302,7 @@ class avm_opto_powers(av_multi):
     def __init__(self,
         extra_param_names = [
             'powerR_onR','powerR_onL','powerL_onR','powerL_onL',
+            'interactionR','interactionL',
             'powerR_gamma','powerL_gamma'
             ],
         extra_param_init = {
@@ -333,8 +334,8 @@ class avm_opto_powers(av_multi):
 
 
         # since we know we opto is primarily affect on contralateral bias but we are testing a secondary effect on ipsi bias...
-        zL_opto = pR *self.params['powerR_onL']  - pL * self.params['powerL_onL']
-        zR_opto = pL *self.params['powerL_onR']  - pR * self.params['powerR_onR']
+        zL_opto = pR *self.params['powerR_onL']  - pL * self.params['powerL_onL'] + self.params['interactionL'] * pR * pL
+        zR_opto = pL *self.params['powerL_onR']  - pR * self.params['powerR_onR'] + self.params['interactionR'] * pR * pL
 
         zR_ctrl = (
             self.params['visR'] * vR +
