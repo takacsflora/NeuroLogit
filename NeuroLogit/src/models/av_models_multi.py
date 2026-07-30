@@ -353,4 +353,58 @@ class avm_opto_powers(av_multi):
         
 
         return zL_ctrl-zL_opto,zR_ctrl-zR_opto
+    
+
+class avm_opto_powers_symmetric(av_multi):
+    def __init__(self,
+        extra_param_names = [
+            'contra','ipsi',
+            'interaction',
+            'power_gamma'
+            ],
+        extra_param_init = {
+            'contra': 0,
+            'ipsi': 0,
+            'interaction': 0,
+            'power_gamma': 1,
+            },
+        extra_param_bounds = {
+            'power_gamma': (0.2, 2),
+        }):
+
+       super().__init__(extra_param_names,extra_param_init,extra_param_bounds)
+
+    def predict_log_proba(self, X):
+        self.check_params()
+
+            # Extract inputs
+        vL = X[["visL"]].values ** self.params['gamma']
+        vR = X[["visR"]].values ** self.params['gamma']
+        aL = X[["audL"]].values
+        aR = X[["audR"]].values
+        pL = X[["left_power"]].values ** self.params['power_gamma'] # power in the left hemisphere
+        pR = X[["right_power"]].values ** self.params['power_gamma'] # power in the right hemisphere
+
+
+        # since we know we opto is primarily affect on contralateral bias but we are testing a secondary effect on ipsi bias...
+        zL_opto = pR *self.params['contra']  - pL * self.params['ipsi'] + self.params['interaction'] * pR * pL
+        zR_opto = pL *self.params['contra']  - pR * self.params['ipsi'] + self.params['interaction'] * pR * pL
+
+        zR_ctrl = (
+            self.params['visR'] * vR +
+            self.params['audR'] * aR +
+            -self.params['audL'] * aL +
+            self.params['biasR']
+             )
+        
+        zL_ctrl = (
+            self.params['visL'] * vL +
+            self.params['audL'] * aL +
+            -self.params['audR'] * aR +
+            self.params['biasL']
+                )
+        
+
+        return zL_ctrl-zL_opto,zR_ctrl-zR_opto
+
 #%% 
