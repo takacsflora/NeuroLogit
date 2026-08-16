@@ -386,6 +386,7 @@ class avm_opto_powers_symmetric(av_multi):
         # since we know we opto is primarily affect on contralateral bias but we are testing a secondary effect on ipsi bias...
         zL_opto = pR *self.params['contra']  - pL * self.params['ipsi'] 
         zR_opto = pL *self.params['contra']  - pR * self.params['ipsi'] 
+        
         zR_ctrl = (
             self.params['visR'] * vR +
             self.params['audR'] * aR +
