@@ -8,18 +8,19 @@ Key features are:
 
 ## System requirements
 - Tested on Win 11/python 3.10 
-- Dependencies compiled in the `environment.yml`
+- Dependencies compiled in the `setup.py`
 - No non-standard hardware required
 
-## Installation 
+## Installation
 ```
 git clone https://github.com/takacsflora/NeuroLogit
 cd NeuroLogit
-conda env create -f environment.yml
-conda activate NeuroLogit
+pip install -e .
 ```
+To use NeuroLogit from another project without cloning: `pip install git+https://github.com/takacsflora/NeuroLogit.git`
 
-Typical install time: <5 mins
+
+Typical install time: <2 mins
 
 ## Demos
 1. To fit models to mouse choices during an audiovisual decision making task, see the tutorial [here](https://github.com/takacsflora/NeuroLogit/blob/main/NeuroLogit/tutorial/audiovisual_mice.ipynb). Includes models to assess brain inactivations on real data form mouse decisions in an audiovisual task. 
