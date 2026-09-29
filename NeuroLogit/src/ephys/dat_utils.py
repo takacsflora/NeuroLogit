@@ -7,16 +7,21 @@ from scipy.signal.windows import gaussian
 from scipy.signal import fftconvolve
 
 
-def get_source_folder():
+def get_source_folder(dataset_mode ='fulldata'):
 
     if 'zcbtfta' in str(Path.home()):
+        # this is to run things on the UCL cluster
         home_rep = '/lustre/home/zcbtfta'
         source_folder = f'{home_rep}/AV_Neural_data/data'
 
 
-    else:
+    elif dataset_mode == 'fulldata':
         home_rep = 'D:'
         source_folder = f'{home_rep}\\AV_Neural_Data_Sept2025\\data'
+
+    elif dataset_mode == 'demo': 
+        source_folder = 'C:\\Users\\Flora\\Documents\\Github\\NeuroLogit\\NeuroLogit\\tutorial\\ephys_data_demo'
+
 
 
     return Path(source_folder)
