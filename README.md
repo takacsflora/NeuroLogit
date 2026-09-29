@@ -30,3 +30,5 @@ Typical install time: <5 mins
 
 (typically all of these models fit in <2 mins)
 
+## License
+MIT. 
