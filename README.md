@@ -27,7 +27,7 @@ Typical install time: <2 mins
 
 2. To build your own model for your own behavioural paradigm, see the tutorial [here](https://github.com/takacsflora/NeuroLogit/blob/main/NeuroLogit/tutorial/building_your_own_class.ipynb). 
 
-3.The description of code for neural analysis is located [here](https://github.com/takacsflora/NeuroLogit/blob/main/NeuroLogit/tutorial/neural_data.ipynb). Neural data is available upon request at the moment. 
+3. The description of code for neural analysis is located [here](https://github.com/takacsflora/NeuroLogit/blob/main/NeuroLogit/tutorial/neural_data.ipynb). Neural data is available upon request at the moment. 
 
 (typically all of these models fit in <2 mins)
 
